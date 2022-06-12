@@ -4,11 +4,13 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "./IMonster.sol";
+import "./IItems.sol";
 
 contract Minigame is IERC721Receiver{
 
     IERC721 public monsterInterface;
     IMonster public statsInterface;
+    IItems public itemsInterface;
 
     struct Inventory {
         uint itemId;
@@ -19,28 +21,39 @@ contract Minigame is IERC721Receiver{
     uint nonce = 0;
 
     mapping(address => Inventory[]) public playerInventory;
+    mapping(address => uint[]) public myMonsterOnBeg;
+    mapping(address => uint[]) public myMonsterOnInt;
 
-    function setInterface(address monsterNFT) public{
+    function setInterface(address monsterNFT, address itemNFT) public{
         monsterInterface = IERC721(monsterNFT);
         statsInterface = IMonster(monsterNFT);
+        itemsInterface = IItems(itemNFT);
     }
 
-    function claimBeginnerMission(uint _tokenId) public{
+    function claimBeginnerMission(uint _tokenId, address _user) public{
         uint expEarned = 4;
         uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
         require(monsterMission + 15 minutes <= block.timestamp, "Duration not over yet");
+        require(checkOnBeg(_tokenId) == true, "Your monster is not on beginner mission");
         statsInterface.resetMissionStart(_tokenId);
         statsInterface.setCooldown(_tokenId);
         statsInterface.expUp(_tokenId, expEarned);
+
+        itemsInterface.beginnerMissionReward(_user, randomNumber());
+        deleteMonsterOnBeg(_tokenId);
     }
 
-    function claimIntermediateMission(uint _tokenId) public{
+    function claimIntermediateMission(uint _tokenId, address _user) public{
         uint expEarned = 8;
         uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
         require(monsterMission + 30 minutes <= block.timestamp, "Duration not over yet");
+        require(checkOnInt(_tokenId) == true, "Your monster is not on intermediate mission");
         statsInterface.resetMissionStart(_tokenId);
         statsInterface.setCooldown(_tokenId);
         statsInterface.expUp(_tokenId, expEarned);
+
+        itemsInterface.intermediateMissionReward(_user, randomNumber());
+        deleteMonsterOnInt(_tokenId);
     }
 
     // function getInventory() public view returns(Inventory[] memory) {
@@ -78,6 +91,7 @@ contract Minigame is IERC721Receiver{
         require(monsterHunger >= 5, "Not enough hunger");
 
         statsInterface.setMissionStart(_tokenId);
+        myMonsterOnBeg[msg.sender].push(_tokenId);
     }
 
     function intermediateMission(uint _tokenId, uint  _duration) public {
@@ -92,10 +106,60 @@ contract Minigame is IERC721Receiver{
         require(monsterMission == 0, "Your monster is still on a mission");
         require(monsterCooldown == 0, " Your monster still on cooldown");
         require(monsterHunger >= 5, "Not enough hunger");
+
+        statsInterface.setMissionStart(_tokenId);
+        myMonsterOnInt[msg.sender].push(_tokenId);
     }
 
+    function deleteMonsterOnBeg(uint _tokenId) internal{
+        uint[] storage myMonster = myMonsterOnBeg[msg.sender];
+        uint index;
+        for(uint i; i < myMonster.length; i++) {
+            if(myMonster[i] == _tokenId) {
+                index = i;
+            }
+        }
+        myMonster[index] = myMonster[myMonster.length - 1];
+        myMonster.pop();
+    }
 
-    function randomNumber () internal returns(uint){
+    function deleteMonsterOnInt(uint _tokenId) internal{
+        uint[] storage myMonster = myMonsterOnInt[msg.sender];
+        uint index;
+        for(uint i; i < myMonster.length; i++) {
+            if(myMonster[i] == _tokenId) {
+                index = i;
+            }
+        }
+        myMonster[index] = myMonster[myMonster.length - 1];
+        myMonster.pop();
+    }
+
+    function checkOnBeg(uint _tokenId) internal view returns(bool){
+        bool result;
+        uint[] storage myMonster = myMonsterOnBeg[msg.sender];
+        for(uint i; i < myMonster.length; i++) {
+            if(myMonster[i] == _tokenId) {
+                result = true;
+            }
+        }
+        
+        return result;
+    }
+
+    function checkOnInt(uint _tokenId) internal view returns(bool){
+        bool result;
+        uint[] storage myMonster = myMonsterOnInt[msg.sender];
+        for(uint i; i < myMonster.length; i++) {
+            if(myMonster[i] == _tokenId) {
+                result = true;
+            }
+        }
+        
+        return result;
+    }
+
+    function randomNumber() internal returns(uint){
         uint number = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender, nonce))) % 100;
         nonce ++;
         return number;
