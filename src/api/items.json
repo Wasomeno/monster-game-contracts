@@ -1,0 +1,21 @@
+{
+    "items" : [
+        {
+            "id" : 1,
+            "name": "Wood",
+            "chance": 100
+        },
+
+        {
+            "id" : 2,
+            "name": "Gold",
+            "chance": 70
+        },
+
+        {
+            "id" : 3,
+            "name": "Cloth",
+            "chance": 90
+        }
+    ]
+}
