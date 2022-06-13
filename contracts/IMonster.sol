@@ -16,6 +16,7 @@ interface IMonster {
 
     function levelUp(uint _tokenId) external;
     function expUp(uint _tokenId, uint _amount) external;
+    function setHunger(uint _tokenId, uint _hunger) external;
     function setCooldown(uint _tokenId) external;
     function setMissionStart(uint _tokenId) external;
     function getMonsterExp(uint _tokenId) external view returns(uint);

@@ -25,11 +25,12 @@ contract Monsters is ERC721, Ownable {
     mapping(uint => Stats) public monsterStats;
 
     constructor() ERC721 ("Monsters", "MTR") {
- 
+        
     }
 
-    function summon(uint _quantity) public {
+    function summon(uint _quantity) public payable{
         require(_quantity <= 5, "You can't mint more than 5");
+        require(msg.value == _quantity * price, "Wrong value of ether sent");
         for(uint i; i < _quantity; i++) {
             _safeMint(msg.sender, monsterPopulation);
             monsterStats[monsterPopulation] = Stats(1, 30, 0, 15, 0, 0);
@@ -64,6 +65,11 @@ contract Monsters is ERC721, Ownable {
         if(monsterStats.exp > monsterStats.expCap) {
             levelUp(_tokenId);
         }
+    }
+
+    function setHunger(uint _tokenId, uint _hunger) public {
+        Stats storage monsterStats = monsterStats[_tokenId];
+        monsterStats.hunger = _hunger;
     }
 
     function setMissionStart(uint _tokenId) public {
@@ -121,8 +127,6 @@ contract Monsters is ERC721, Ownable {
     function _baseURI() internal view virtual override returns (string memory) {
         return _baseTokenURI;
     }
-
-
 
 
     function setBaseURI(string memory baseURI) public onlyOwner {

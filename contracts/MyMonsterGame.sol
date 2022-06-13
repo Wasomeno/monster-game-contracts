@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "./IMonster.sol";
 import "./IItems.sol";
 
-contract Minigame is IERC721Receiver{
+contract MonsterGame is IERC721Receiver{
 
     IERC721 public monsterInterface;
     IMonster public statsInterface;
@@ -31,25 +31,31 @@ contract Minigame is IERC721Receiver{
     }
 
     function claimBeginnerMission(uint _tokenId, address _user) public{
+        uint hunger = statsInterface.getMonsterHunger(_tokenId);
+        uint newHunger = hunger  - 10;
         uint expEarned = 4;
         uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
-        require(monsterMission + 15 minutes <= block.timestamp, "Duration not over yet");
-        require(checkOnBeg(_tokenId) == true, "Your monster is not on beginner mission");
+        // require(monsterMission + 15 minutes <= block.timestamp, "Duration not over yet");
+        require(checkOnBeg(_tokenId, _user) == true, "Your monster is not on beginner mission");
         statsInterface.resetMissionStart(_tokenId);
         statsInterface.setCooldown(_tokenId);
+        statsInterface.setHunger(_tokenId, newHunger);
         statsInterface.expUp(_tokenId, expEarned);
 
         itemsInterface.beginnerMissionReward(_user, randomNumber());
-        deleteMonsterOnBeg(_tokenId);
+        deleteMonsterOnBeg(_tokenId, _user);
     }
 
     function claimIntermediateMission(uint _tokenId, address _user) public{
+        uint hunger = statsInterface.getMonsterHunger(_tokenId);
+        uint newHunger = hunger  - 10;
         uint expEarned = 8;
         uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
-        require(monsterMission + 30 minutes <= block.timestamp, "Duration not over yet");
-        require(checkOnInt(_tokenId) == true, "Your monster is not on intermediate mission");
+        // require(monsterMission + 30 minutes <= block.timestamp, "Duration not over yet");
+        require(checkOnInt(_tokenId, _user) == true, "Your monster is not on intermediate mission");
         statsInterface.resetMissionStart(_tokenId);
         statsInterface.setCooldown(_tokenId);
+        statsInterface.setHunger(_tokenId, newHunger);
         statsInterface.expUp(_tokenId, expEarned);
 
         itemsInterface.intermediateMissionReward(_user, randomNumber());
@@ -80,22 +86,22 @@ contract Minigame is IERC721Receiver{
         statsInterface.feedMonster(_tokenId, _amount);
     }
 
-    function beginnerMission(uint _tokenId) public {
+    function beginnerMission(uint _tokenId, address _user) public {
         uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
         uint monsterHunger = statsInterface.getMonsterHunger(_tokenId);
         uint monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
 
-        require(monsterInterface.ownerOf(_tokenId) == msg.sender, "It's not your monster");
+        require(monsterInterface.ownerOf(_tokenId) == _user, "It's not your monster");
         require(monsterMission == 0, "Your monster is still on a mission");
         require(monsterCooldown == 0, " Your monster still on cooldown");
         require(monsterHunger >= 5, "Not enough hunger");
 
         statsInterface.setMissionStart(_tokenId);
-        myMonsterOnBeg[msg.sender].push(_tokenId);
+        myMonsterOnBeg[_user].push(_tokenId);
     }
 
-    function intermediateMission(uint _tokenId, uint  _duration) public {
-        require(monsterInterface.ownerOf(_tokenId) == msg.sender, "It's not your monster");
+    function intermediateMission(uint _tokenId, address _user) public {
+        require(monsterInterface.ownerOf(_tokenId) == _user, "It's not your monster");
 
         uint monsterLevel = statsInterface.getMonsterLevel(_tokenId);
         uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
@@ -108,11 +114,30 @@ contract Minigame is IERC721Receiver{
         require(monsterHunger >= 5, "Not enough hunger");
 
         statsInterface.setMissionStart(_tokenId);
-        myMonsterOnInt[msg.sender].push(_tokenId);
+        myMonsterOnInt[_user].push(_tokenId);
     }
 
-    function deleteMonsterOnBeg(uint _tokenId) internal{
-        uint[] storage myMonster = myMonsterOnBeg[msg.sender];
+    function checkItemOnInventory(uint[] memory _item, uint[] memory _quantity, address _user) public {
+        Inventory[] storage inventory = playerInventory[_user];
+        for(uint i; i < inventory.length ; i++) {
+            if(inventory[i].itemId == _item[i]) {
+                 inventory[i].quantity = inventory[i].quantity + _quantity[i];
+            }
+        }
+        itemToInventory(_item, _quantity, _user);
+    }
+
+    function itemToInventory(uint[] memory _item, uint[] memory _quantity, address _user) public {
+        Inventory[] storage inventory = playerInventory[_user];
+        for(uint i; i < _item.length ; i++) {
+            inventory.push(Inventory(_item[i], _quantity[i]));
+        }
+    }
+
+    
+
+    function deleteMonsterOnBeg(uint _tokenId, address _user) internal{
+        uint[] storage myMonster = myMonsterOnBeg[_user];
         uint index;
         for(uint i; i < myMonster.length; i++) {
             if(myMonster[i] == _tokenId) {
@@ -135,9 +160,9 @@ contract Minigame is IERC721Receiver{
         myMonster.pop();
     }
 
-    function checkOnBeg(uint _tokenId) internal view returns(bool){
+    function checkOnBeg(uint _tokenId, address _user) internal view returns(bool){
         bool result;
-        uint[] storage myMonster = myMonsterOnBeg[msg.sender];
+        uint[] storage myMonster = myMonsterOnBeg[_user];
         for(uint i; i < myMonster.length; i++) {
             if(myMonster[i] == _tokenId) {
                 result = true;
@@ -147,9 +172,9 @@ contract Minigame is IERC721Receiver{
         return result;
     }
 
-    function checkOnInt(uint _tokenId) internal view returns(bool){
+    function checkOnInt(uint _tokenId, address _user) internal view returns(bool){
         bool result;
-        uint[] storage myMonster = myMonsterOnInt[msg.sender];
+        uint[] storage myMonster = myMonsterOnInt[_user];
         for(uint i; i < myMonster.length; i++) {
             if(myMonster[i] == _tokenId) {
                 result = true;
