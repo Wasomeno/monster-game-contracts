@@ -19,12 +19,14 @@ interface IMonster {
     function setHunger(uint _tokenId, uint _hunger) external;
     function setCooldown(uint _tokenId) external;
     function setMissionStart(uint _tokenId) external;
+    function setStatus(uint _tokenId, uint _status) external;
     function getMonsterExp(uint _tokenId) external view returns(uint);
     function getMonsterLevel(uint _tokenId) external view returns(uint); 
     function getMonsterExpCap(uint _tokenId) external view returns(uint); 
     function getMonsterHunger(uint _tokenId) external view returns(uint);
     function getMonsterCooldown(uint _tokenId) external view returns(uint);
     function getMonsterMissionStart(uint _tokenId) external view returns(uint);
+    function getMonsterStatus(uint _tokenId) external view returns(uint);
     function resetMissionStart(uint _tokenId) external;
     function feedMonster(uint _tokenId, uint _amount) external;
 

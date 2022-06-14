@@ -43,6 +43,7 @@ contract MonsterGame is IERC721Receiver{
         statsInterface.expUp(_tokenId, expEarned);
 
         itemsInterface.beginnerMissionReward(_user, randomNumber());
+        statsInterface.setStatus(_tokenId, 0);
         deleteMonsterOnBeg(_tokenId, _user);
     }
 
@@ -59,8 +60,11 @@ contract MonsterGame is IERC721Receiver{
         statsInterface.expUp(_tokenId, expEarned);
 
         itemsInterface.intermediateMissionReward(_user, randomNumber());
+        statsInterface.setStatus(_tokenId, 0);
         deleteMonsterOnInt(_tokenId);
     }
+
+    
 
     // function getInventory() public view returns(Inventory[] memory) {
     //     Inventory[] memory result = new Inventory[](addressToInventory[msg.sender]);
@@ -90,13 +94,16 @@ contract MonsterGame is IERC721Receiver{
         uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
         uint monsterHunger = statsInterface.getMonsterHunger(_tokenId);
         uint monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
-
+        uint monsterStatus = statsInterface.getMonsterStatus(_tokenId);
+        
         require(monsterInterface.ownerOf(_tokenId) == _user, "It's not your monster");
+        require(monsterStatus == 0, "Your monster still working on something");
         require(monsterMission == 0, "Your monster is still on a mission");
         require(monsterCooldown == 0, " Your monster still on cooldown");
         require(monsterHunger >= 5, "Not enough hunger");
 
         statsInterface.setMissionStart(_tokenId);
+        statsInterface.setStatus(_tokenId, 1);
         myMonsterOnBeg[_user].push(_tokenId);
     }
 
@@ -107,13 +114,16 @@ contract MonsterGame is IERC721Receiver{
         uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
         uint monsterHunger = statsInterface.getMonsterHunger(_tokenId);
         uint monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
+        uint monsterStatus = statsInterface.getMonsterStatus(_tokenId);
 
-        require(monsterLevel > 3, "Your monster does'nt met the minimum requirement");
+         require(monsterStatus == 0, "Your monster still working on something");
+        require(monsterLevel > 2, "Your monster does'nt met the minimum requirement");
         require(monsterMission == 0, "Your monster is still on a mission");
         require(monsterCooldown == 0, " Your monster still on cooldown");
-        require(monsterHunger >= 5, "Not enough hunger");
+        require(monsterHunger >= 10, "Not enough hunger");
 
         statsInterface.setMissionStart(_tokenId);
+        statsInterface.setStatus(_tokenId, 1);
         myMonsterOnInt[_user].push(_tokenId);
     }
 
@@ -133,8 +143,6 @@ contract MonsterGame is IERC721Receiver{
             inventory.push(Inventory(_item[i], _quantity[i]));
         }
     }
-
-    
 
     function deleteMonsterOnBeg(uint _tokenId, address _user) internal{
         uint[] storage myMonster = myMonsterOnBeg[_user];
@@ -183,6 +191,7 @@ contract MonsterGame is IERC721Receiver{
         
         return result;
     }
+
 
     function randomNumber() internal returns(uint){
         uint number = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender, nonce))) % 100;

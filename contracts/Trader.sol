@@ -63,6 +63,9 @@ contract Trader is ERC1155Receiver{
         return index;
     }
 
+    function resetDailyShop(uint _item, uint _quantity, uint _price, address _user) public {
+        dailyShop[_user].push(Shop(_item, _quantity, _price));
+    }
    
 
     function onERC1155BatchReceived(

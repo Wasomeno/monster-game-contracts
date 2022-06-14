@@ -13,6 +13,7 @@ contract Monsters is ERC721, Ownable {
         uint expCap;
         uint missionStartTime;
         uint cooldown;
+        uint status;
     }
     
     uint public monsterPopulation = 0;
@@ -25,7 +26,7 @@ contract Monsters is ERC721, Ownable {
     mapping(uint => Stats) public monsterStats;
 
     constructor() ERC721 ("Monsters", "MTR") {
-        
+
     }
 
     function summon(uint _quantity) public payable{
@@ -33,7 +34,7 @@ contract Monsters is ERC721, Ownable {
         require(msg.value == _quantity * price, "Wrong value of ether sent");
         for(uint i; i < _quantity; i++) {
             _safeMint(msg.sender, monsterPopulation);
-            monsterStats[monsterPopulation] = Stats(1, 30, 0, 15, 0, 0);
+            monsterStats[monsterPopulation] = Stats(1, 30, 0, 15, 0, 0, 0);
             monsterPopulation++;
         }
     }
@@ -87,6 +88,11 @@ contract Monsters is ERC721, Ownable {
         monsterStats.cooldown = block.timestamp + 5 minutes;
     }
 
+    function setStatus(uint _tokenId, uint _status) public {
+        Stats storage monsterStats = monsterStats[_tokenId];
+        monsterStats.status = _status;
+    }
+
     function getMonsterExp(uint _tokenId) public view returns(uint) {
         uint monsterExp = monsterStats[_tokenId].exp;
         return monsterExp;
@@ -115,6 +121,11 @@ contract Monsters is ERC721, Ownable {
     function getMonsterMissionStart(uint _tokenId) public view returns(uint) {
         uint monsterMissionStart = monsterStats[_tokenId].missionStartTime;
         return monsterMissionStart;
+    }
+
+    function getMonsterStatus(uint _tokenId) public view returns(uint) {
+        uint monsterStatus = monsterStats[_tokenId].status;
+        return monsterStatus;
     }
 
     function feedMonster(uint _tokenId, uint _amount) public {

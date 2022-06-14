@@ -8,12 +8,17 @@ contract Items is ERC1155 {
 
     IMonsterGame gameInterface;
 
-    uint public constant BERRY = 0;
-    uint public constant GOLD = 1;
+    uint public constant M_COINS = 0;
+    uint public constant BERRY = 1;
     uint public constant HUNGER_POTION = 2;
+    uint public constant EXP_BOTTLE = 3;
+    uint public constant TOKEN_CRYSTAL = 4;
+
 
     mapping(uint => uint[]) public itemRateSet;
     mapping(uint => uint[]) public itemSet;
+    mapping(uint => uint[]) public bossRewardSet;
+    mapping(uint => uint[]) public bossRateSet;
 
     constructor(address monsterGame) ERC1155("") {
         gameInterface = IMonsterGame(monsterGame);
@@ -32,6 +37,25 @@ contract Items is ERC1155 {
         itemSet[2].push(1);
         itemRateSet[2].push(10);
         itemRateSet[2].push(10);
+
+        bossRewardSet[0].push(0);
+        bossRewardSet[0].push(2);
+        bossRewardSet[0].push(3);
+        bossRewardSet[0].push(4);
+
+        bossRewardSet[1].push(0);
+        bossRewardSet[1].push(2);
+        bossRewardSet[1].push(4);
+
+        bossRateSet[1].push(10);
+        bossRateSet[1].push(1);
+        bossRateSet[1].push(3);
+
+        bossRateSet[0].push(50);
+        bossRateSet[0].push(2);
+        bossRateSet[0].push(1);
+        bossRateSet[0].push(10);
+        
 
     }
 
@@ -70,6 +94,16 @@ contract Items is ERC1155 {
         } else {
             _mintBatch(_user, itemSet[5], itemRateSet[5],"");
             gameInterface.checkItemOnInventory(itemSet[5], itemRateSet[5], _user);
+        }
+    }
+
+    function bossFightReward(address _user, uint _odds, uint _chance) public {
+        if(_odds < _chance) {
+            _mintBatch(_user, bossRewardSet[0], bossRateSet[0],"");
+            gameInterface.checkItemOnInventory(bossRewardSet[0], bossRateSet[0], _user);
+        } else {
+            _mintBatch(_user, bossRewardSet[1], bossRateSet[1],"");
+            gameInterface.checkItemOnInventory(bossRewardSet[1], bossRateSet[1], _user);
         }
     }
 }
