@@ -6,4 +6,5 @@ import "./Items.sol";
 interface IItems {
     function beginnerMissionReward(address _user, uint _odds) external;
     function intermediateMissionReward(address _user, uint _odds) external;
+    function bossFightReward(address _user, uint _odds, uint _chance) external;
 }
