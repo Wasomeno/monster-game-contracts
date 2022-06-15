@@ -1,58 +1,63 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.0 <0.9.0;
+
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "./IMonster.sol";
 import "./IItems.sol";
 
 contract Dungeon {
 
-    IMonster monsterInterface;
+    IERC721 monsterInterface;
+    IMonster statsInterface;
     IItems itemInterface;
+
+    uint nonce;
 
     mapping(address => uint[]) public myMonsterOnBoss;
 
     function setInterface(address monsterNFT, address itemNFT) public {
-        monsterInterface = IMonster(monsterNFT);
-        itemsInterface = IItems(itemInterface);
+        monsterInterface = IERC721(monsterNFT);
+        statsInterface = IMonster(monsterNFT);
+        itemInterface = IItems(itemInterface);
     }
 
     function bossFight(uint _tokenId, address _user) public {
         require(monsterInterface.ownerOf(_tokenId) == _user, "It's not your monster");
 
-        uint monsterLevel = monsterInterface.getMonsterLevel(_tokenId);
-        uint monsterMission = monsterInterface.getMonsterMissionStart(_tokenId);
-        uint monsterHunger = monsterInterface.getMonsterHunger(_tokenId);
-        uint monsterCooldown = monsterInterface.getMonsterCooldown(_tokenId);
+        uint monsterLevel = statsInterface.getMonsterLevel(_tokenId);
+        uint monsterStatus = statsInterface.getMonsterStatus(_tokenId);
+        uint monsterHunger = statsInterface.getMonsterHunger(_tokenId);
+        uint monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
 
         require(monsterLevel > 3, "Your monster does'nt met the minimum requirement");
-        require(monsterMission == 0, "Your monster is still on a mission");
+        require(monsterStatus == 0, "Your monster still working on something");
         require(monsterCooldown == 0, " Your monster still on cooldown");
         require(monsterHunger >= 20, "Not enough hunger");
 
-        monsterInterface.setStatus(_tokenId, 3);
+        statsInterface.setStatus(_tokenId, 3);
         myMonsterOnBoss[_user].push(_tokenId);
     }
 
     function claimBossFight(uint _tokenId, address _user) public {
-        uint hunger = monsterInterface.getMonsterHunger(_tokenId);
+        uint hunger = statsInterface.getMonsterHunger(_tokenId);
         uint newHunger = hunger  - 20;
         uint expEarned = 8;
-        uint level = monsterInterface.getMonsterLevel(_tokenId);
-        uint monsterMission = monsterInterface.getMonsterMissionStart(_tokenId);
+        uint level = statsInterface.getMonsterLevel(_tokenId);
 
         require(checkOnBoss(_tokenId, _user) == true, "Your monster is not on boss fight");
-        monsterInterface.setCooldown(_tokenId);
-        monsterInterface.setHunger(_tokenId, newHunger);
-        monsterInterface.expUp(_tokenId, expEarned);
+        statsInterface.setCooldown(_tokenId);
+        statsInterface.setHunger(_tokenId, newHunger);
+        statsInterface.expUp(_tokenId, expEarned);
 
         if(level == 1) {
-            itemsInterface.bossFightReward(_user, randomNumber(), bossFightChance(30));
+            itemInterface.bossFightReward(_user, randomNumber(), bossFightChance(30));
         } else if (level == 2) {
-            itemsInterface.bossFightReward(_user, randomNumber(), bossFightChance(60));
+            itemInterface.bossFightReward(_user, randomNumber(), bossFightChance(60));
         } else {
-            itemsInterface.bossFightReward(_user, randomNumber(), bossFightChance(90));
+            itemInterface.bossFightReward(_user, randomNumber(), bossFightChance(90));
         }
         
-        monsterInterface.setStatus(_tokenId, 0);
+        statsInterface.setStatus(_tokenId, 0);
         deleteMonsterOnBoss(_tokenId, _user);
     }
 

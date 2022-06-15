@@ -11,7 +11,6 @@ contract Monsters is ERC721, Ownable {
         uint hunger;
         uint exp;
         uint expCap;
-        uint missionStartTime;
         uint cooldown;
         uint status;
     }
@@ -34,7 +33,7 @@ contract Monsters is ERC721, Ownable {
         require(msg.value == _quantity * price, "Wrong value of ether sent");
         for(uint i; i < _quantity; i++) {
             _safeMint(msg.sender, monsterPopulation);
-            monsterStats[monsterPopulation] = Stats(1, 30, 0, 15, 0, 0, 0);
+            monsterStats[monsterPopulation] = Stats(1, 30, 0, 15, 0, 0);
             monsterPopulation++;
         }
     }
@@ -73,16 +72,6 @@ contract Monsters is ERC721, Ownable {
         monsterStats.hunger = _hunger;
     }
 
-    function setMissionStart(uint _tokenId) public {
-        Stats storage monsterStats = monsterStats[_tokenId];
-        monsterStats.missionStartTime = block.timestamp;
-    }
-
-    function resetMissionStart(uint _tokenId) public {
-        Stats storage monsterStats = monsterStats[_tokenId];
-        monsterStats.missionStartTime = 0;   
-    }
-
     function setCooldown(uint _tokenId) public {
         Stats storage monsterStats = monsterStats[_tokenId];
         monsterStats.cooldown = block.timestamp + 5 minutes;
@@ -116,11 +105,6 @@ contract Monsters is ERC721, Ownable {
     function getMonsterCooldown(uint _tokenId) public view returns(uint) {
         uint monsterCooldown = monsterStats[_tokenId].cooldown;
         return monsterCooldown;
-    }
-
-    function getMonsterMissionStart(uint _tokenId) public view returns(uint) {
-        uint monsterMissionStart = monsterStats[_tokenId].missionStartTime;
-        return monsterMissionStart;
     }
 
     function getMonsterStatus(uint _tokenId) public view returns(uint) {

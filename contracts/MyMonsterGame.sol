@@ -16,13 +16,19 @@ contract MonsterGame is IERC721Receiver{
         uint itemId;
         uint quantity;
     }
+
+    struct Monster {
+        uint tokenId;
+        uint missionStart;
+        address owner;
+    }
     
     uint feedingFee = 0.0001 ether;
     uint nonce = 0;
 
     mapping(address => Inventory[]) public playerInventory;
-    mapping(address => uint[]) public myMonsterOnBeg;
-    mapping(address => uint[]) public myMonsterOnInt;
+    mapping(address => Monster[]) public myMonsterOnBeg;
+    mapping(address => Monster[]) public myMonsterOnInt;
 
     function setInterface(address monsterNFT, address itemNFT) public{
         monsterInterface = IERC721(monsterNFT);
@@ -31,10 +37,12 @@ contract MonsterGame is IERC721Receiver{
     }
 
     function claimBeginnerMission(uint _tokenId, address _user) public{
+        Monster[] memory monster = myMonsterOnBeg[_user];
+        uint index = getMonsterIndexBeg(_tokenId, _user);
+        uint missionStart = monster[index].missionStart;
         uint hunger = statsInterface.getMonsterHunger(_tokenId);
         uint newHunger = hunger  - 10;
         uint expEarned = 4;
-        uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
         // require(monsterMission + 15 minutes <= block.timestamp, "Duration not over yet");
         require(checkOnBeg(_tokenId, _user) == true, "Your monster is not on beginner mission");
         statsInterface.resetMissionStart(_tokenId);
@@ -48,10 +56,12 @@ contract MonsterGame is IERC721Receiver{
     }
 
     function claimIntermediateMission(uint _tokenId, address _user) public{
+        Monster[] memory monster = myMonsterOnInt[_user];
+        uint index = getMonsterIndexInt(_tokenId, _user);
+        uint missionStart = monster[index].missionStart;
         uint hunger = statsInterface.getMonsterHunger(_tokenId);
         uint newHunger = hunger  - 10;
         uint expEarned = 8;
-        uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
         // require(monsterMission + 30 minutes <= block.timestamp, "Duration not over yet");
         require(checkOnInt(_tokenId, _user) == true, "Your monster is not on intermediate mission");
         statsInterface.resetMissionStart(_tokenId);
@@ -91,40 +101,33 @@ contract MonsterGame is IERC721Receiver{
     }
 
     function beginnerMission(uint _tokenId, address _user) public {
-        uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
         uint monsterHunger = statsInterface.getMonsterHunger(_tokenId);
         uint monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
         uint monsterStatus = statsInterface.getMonsterStatus(_tokenId);
         
         require(monsterInterface.ownerOf(_tokenId) == _user, "It's not your monster");
         require(monsterStatus == 0, "Your monster still working on something");
-        require(monsterMission == 0, "Your monster is still on a mission");
         require(monsterCooldown == 0, " Your monster still on cooldown");
         require(monsterHunger >= 5, "Not enough hunger");
 
-        statsInterface.setMissionStart(_tokenId);
         statsInterface.setStatus(_tokenId, 1);
-        myMonsterOnBeg[_user].push(_tokenId);
+        myMonsterOnBeg[_user].push(Monster(_tokenId, block.timestamp, _user));
     }
 
     function intermediateMission(uint _tokenId, address _user) public {
-        require(monsterInterface.ownerOf(_tokenId) == _user, "It's not your monster");
-
         uint monsterLevel = statsInterface.getMonsterLevel(_tokenId);
-        uint monsterMission = statsInterface.getMonsterMissionStart(_tokenId);
         uint monsterHunger = statsInterface.getMonsterHunger(_tokenId);
         uint monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
         uint monsterStatus = statsInterface.getMonsterStatus(_tokenId);
 
-         require(monsterStatus == 0, "Your monster still working on something");
+        require(monsterInterface.ownerOf(_tokenId) == _user, "It's not your monster");
+        require(monsterStatus == 0, "Your monster still working on something");
         require(monsterLevel > 2, "Your monster does'nt met the minimum requirement");
-        require(monsterMission == 0, "Your monster is still on a mission");
         require(monsterCooldown == 0, " Your monster still on cooldown");
         require(monsterHunger >= 10, "Not enough hunger");
 
-        statsInterface.setMissionStart(_tokenId);
         statsInterface.setStatus(_tokenId, 1);
-        myMonsterOnInt[_user].push(_tokenId);
+        myMonsterOnInt[_user].push(Monster(_tokenId, block.timestamp, _user));
     }
 
     function checkItemOnInventory(uint[] memory _item, uint[] memory _quantity, address _user) public {
@@ -145,10 +148,10 @@ contract MonsterGame is IERC721Receiver{
     }
 
     function deleteMonsterOnBeg(uint _tokenId, address _user) internal{
-        uint[] storage myMonster = myMonsterOnBeg[_user];
+        Monster[] storage myMonster = myMonsterOnBeg[_user];
         uint index;
         for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i] == _tokenId) {
+            if(myMonster[i].tokenId == _tokenId) {
                 index = i;
             }
         }
@@ -157,10 +160,10 @@ contract MonsterGame is IERC721Receiver{
     }
 
     function deleteMonsterOnInt(uint _tokenId) internal{
-        uint[] storage myMonster = myMonsterOnInt[msg.sender];
+        Monster[] storage myMonster = myMonsterOnInt[msg.sender];
         uint index;
         for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i] == _tokenId) {
+            if(myMonster[i].tokenId == _tokenId) {
                 index = i;
             }
         }
@@ -170,9 +173,9 @@ contract MonsterGame is IERC721Receiver{
 
     function checkOnBeg(uint _tokenId, address _user) internal view returns(bool){
         bool result;
-        uint[] storage myMonster = myMonsterOnBeg[_user];
+        Monster[] storage myMonster = myMonsterOnBeg[_user];
         for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i] == _tokenId) {
+            if(myMonster[i].tokenId == _tokenId) {
                 result = true;
             }
         }
@@ -182,14 +185,38 @@ contract MonsterGame is IERC721Receiver{
 
     function checkOnInt(uint _tokenId, address _user) internal view returns(bool){
         bool result;
-        uint[] storage myMonster = myMonsterOnInt[_user];
+        Monster[] storage myMonster = myMonsterOnInt[_user];
         for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i] == _tokenId) {
+            if(myMonster[i].tokenId == _tokenId) {
                 result = true;
             }
         }
         
         return result;
+    }
+
+    function getMonsterIndexInt(uint _tokenId, address _user) internal view returns(uint){
+        uint index;
+        Monster[] storage myMonster = myMonsterOnInt[_user];
+        for(uint i; i < myMonster.length; i++) {
+            if(myMonster[i].tokenId == _tokenId) {
+                index = i;
+            }
+        }
+        
+        return index;
+    }
+
+    function getMonsterIndexBeg(uint _tokenId, address _user) internal view returns(uint){
+        uint index;
+        Monster[] storage myMonster = myMonsterOnBeg[_user];
+        for(uint i; i < myMonster.length; i++) {
+            if(myMonster[i].tokenId == _tokenId) {
+                index = i;
+            }
+        }
+        
+        return index;
     }
 
 
