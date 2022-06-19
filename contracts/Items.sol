@@ -14,7 +14,6 @@ contract Items is ERC1155 {
     uint public constant EXP_BOTTLE = 3;
     uint public constant TOKEN_CRYSTAL = 4;
 
-
     mapping(uint => uint[]) public itemRateSet;
     mapping(uint => uint[]) public itemSet;
     mapping(uint => uint[]) public bossRewardSet;
@@ -57,6 +56,10 @@ contract Items is ERC1155 {
         bossRateSet[0].push(10);
         
 
+    }
+
+    function mintForShop(address _user, uint _id, uint _quantity) public {
+        _mint(_user, _id, _quantity, "");
     }
 
     function newItemRatesSet(uint _id, uint[] memory _rate) public {

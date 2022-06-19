@@ -10,8 +10,8 @@ interface IMonster {
         uint hunger;
         uint exp;
         uint expCap;
-        uint missionDuration;
         uint cooldown;
+        uint status; 
     }
 
     function levelUp(uint _tokenId) external;

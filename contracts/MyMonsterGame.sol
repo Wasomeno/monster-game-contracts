@@ -43,9 +43,8 @@ contract MonsterGame is IERC721Receiver{
         uint hunger = statsInterface.getMonsterHunger(_tokenId);
         uint newHunger = hunger  - 10;
         uint expEarned = 4;
-        // require(monsterMission + 15 minutes <= block.timestamp, "Duration not over yet");
+        // require(missionStart + 15 minutes <= block.timestamp, "Duration not over yet");
         require(checkOnBeg(_tokenId, _user) == true, "Your monster is not on beginner mission");
-        statsInterface.resetMissionStart(_tokenId);
         statsInterface.setCooldown(_tokenId);
         statsInterface.setHunger(_tokenId, newHunger);
         statsInterface.expUp(_tokenId, expEarned);
@@ -62,9 +61,8 @@ contract MonsterGame is IERC721Receiver{
         uint hunger = statsInterface.getMonsterHunger(_tokenId);
         uint newHunger = hunger  - 10;
         uint expEarned = 8;
-        // require(monsterMission + 30 minutes <= block.timestamp, "Duration not over yet");
+        // require(missionStart + 30 minutes <= block.timestamp, "Duration not over yet");
         require(checkOnInt(_tokenId, _user) == true, "Your monster is not on intermediate mission");
-        statsInterface.resetMissionStart(_tokenId);
         statsInterface.setCooldown(_tokenId);
         statsInterface.setHunger(_tokenId, newHunger);
         statsInterface.expUp(_tokenId, expEarned);
@@ -145,6 +143,21 @@ contract MonsterGame is IERC721Receiver{
         for(uint i; i < _item.length ; i++) {
             inventory.push(Inventory(_item[i], _quantity[i]));
         }
+    }
+    
+    function checkSingleItemOnInventory(uint _item, uint _quantity, address _user) public {
+        Inventory[] storage inventory = playerInventory[_user];
+        for(uint i; i < inventory.length ; i++) {
+            if(inventory[i].itemId == _item) {
+                 inventory[i].quantity = inventory[i].quantity + _quantity;
+            }
+        }
+        singleItemToInventory(_item, _quantity, _user);
+    }
+
+    function singleItemToInventory(uint _item, uint _quantity, address _user) public {
+        Inventory[] storage inventory = playerInventory[_user];
+        inventory.push(Inventory(_item, _quantity));
     }
 
     function deleteMonsterOnBeg(uint _tokenId, address _user) internal{

@@ -18,7 +18,7 @@ contract Dungeon {
     function setInterface(address monsterNFT, address itemNFT) public {
         monsterInterface = IERC721(monsterNFT);
         statsInterface = IMonster(monsterNFT);
-        itemInterface = IItems(itemInterface);
+        itemInterface = IItems(itemNFT);
     }
 
     function bossFight(uint _tokenId, address _user) public {
@@ -29,10 +29,9 @@ contract Dungeon {
         uint monsterHunger = statsInterface.getMonsterHunger(_tokenId);
         uint monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
 
-        require(monsterLevel > 3, "Your monster does'nt met the minimum requirement");
-        require(monsterStatus == 0, "Your monster still working on something");
-        require(monsterCooldown == 0, " Your monster still on cooldown");
-        require(monsterHunger >= 20, "Not enough hunger");
+        // require(monsterStatus == 0, "Your monster still working on something");
+        // require(monsterCooldown == 0, " Your monster still on cooldown");
+        // require(monsterHunger >= 20, "Not enough hunger");
 
         statsInterface.setStatus(_tokenId, 3);
         myMonsterOnBoss[_user].push(_tokenId);

@@ -8,14 +8,33 @@ async function main() {
   const MonsterGame = await hre.ethers.getContractFactory("MonsterGame");
   const monsterGame = await MonsterGame.deploy();
 
+  const Smelter = await hre.ethers.getContractFactory("Smelter");
+  const smelter = await Smelter.deploy();
+
+  const Dungeon = await hre.ethers.getContractFactory("Dungeon");
+  const dungeon = await Dungeon.deploy();
+
+  const Trader = await hre.ethers.getContractFactory("Trader");
+  const trader = await Trader.deploy();
+
+  const Nursery = await hre.ethers.getContractFactory("Nursery");
+  const nursery = await Nursery.deploy();
+
   const Items = await hre.ethers.getContractFactory("Items");
   const items = await Items.deploy(monsterGame.address);
 
   await monster.deployed();
-  await monsterGame.deployed();
+  await nursery.deployed();
+  await trader.deployed();
+  await smelter.deployed();
+  await dungeon.deployed();
   await items.deployed();
+  await monsterGame.deployed();
 
-  await monsterGame.setInterface(monster.address, items.address);
+  await nursery.setInterface(monster.address, items.address);
+  await trader.setInterface(items.address, monsterGame.address);
+  await dungeon.setInterface(monster.address, items.address);
+  await nursery.setInterface(monster.address, items.address);
 
   // console.log("Monster NFT deployed to:", monster.address);
   // console.log("Monster Game deployed to:", monsterGame.address);
@@ -40,20 +59,19 @@ async function main() {
   );
   console.log("");
 
-  console.log("=== Send monster to missions=======");
-  console.log("");
+  console.log("=== Send monster dungeon ====");
 
   const monster0 = await monster.monsterStats(0);
 
   console.log("Monster 0 stats before mission : " + monster0);
 
-  await monsterGame.connect(user1).beginnerMission(0, user1.address);
+  await dungeon.connect(user1).bossFight(0, user1.address);
 
   console.log("");
-  console.log("Sending Monster 0 to mission...");
+  console.log("Sending Monster 0 to dungeon...");
   console.log("");
 
-  await monsterGame.claimBeginnerMission(0, user1.address);
+  await dungeon.claimBossFight(0, user1.address);
   const monster0After = await monster.monsterStats(0);
 
   console.log("Monster 0 stats after mission : " + monster0After);
@@ -63,7 +81,7 @@ async function main() {
   const inventory1 = await monsterGame.playerInventory(user1.address, 1);
 
   console.log(
-    "User 1 inventory after mission: " +
+    "User 1 inventory after dungeon: " +
       "( " +
       inventory0 +
       " " +
@@ -72,19 +90,44 @@ async function main() {
   );
 
   console.log("");
+  console.log("=== Send Monster To Nursery ========");
 
-  console.log("=== Feeding Monster =========");
-  await monsterGame.feedMonster(0, 10, {
-    value: hre.ethers.utils.parseEther("0.001"),
+  console.log("Sending monster to nursery.....");
+  console.log("");
+
+  await nursery.putOnNursery(0, user1.address, 3);
+  await nursery.goBackHome(0, user1.address);
+
+  const monsterAfterNursery = await monster.monsterStats(0);
+
+  console.log("Monster 0 stats after nursery : " + monsterAfterNursery);
+  console.log("");
+
+  console.log("=== Buy and Trade items on Trader ===========");
+
+  await trader.buyItem(0, 2, user1.address, {
+    value: hre.ethers.utils.parseEther("0.0002"),
   });
+
+  const inventoryAfterBuy0 = await monsterGame.playerInventory(
+    user1.address,
+    0
+  );
+  const inventoryAfterBuy1 = await monsterGame.playerInventory(
+    user1.address,
+    1
+  );
+
   console.log("");
 
-  const monsterAfterFeeding = await monster.monsterStats(0);
-
-  console.log("Monster stats after feeding : " + monsterAfterFeeding);
-  console.log("");
-
-  console.log("");
+  console.log(
+    "User 1 inventory after buy: " +
+      "( " +
+      inventoryAfterBuy0 +
+      " " +
+      inventoryAfterBuy1 +
+      " )"
+  );
 }
 
 // We recommend this pattern to be able to use async/await everywhere
