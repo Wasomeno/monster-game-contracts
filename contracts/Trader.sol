@@ -57,51 +57,66 @@ contract Trader is ERC1155Receiver{
 
     function buyItem(uint _item, uint _quantity, address _user) public payable{
         require(_quantity <= 3, "There's only 3 stocks per item everyday");
+        ShopLimit[] storage limitStr = shopDailyLimit[_user];
+        ShopLimit[] memory limitMem = shopDailyLimit[_user];
         uint index = getItemIndex(_item, _user);
-        shopDailyLimit[_user].push(ShopLimit(0, 0));
-        ShopLimit[] storage limit = shopDailyLimit[_user];
-        
-        require(limit[index].quantity <= 3, "You hit your limit");
-        require(msg.value == dailyShop[index].price * _quantity, "Wrong value of ether sent");
+        uint quantity = limitMem[index].quantity;
+        uint price = dailyShop[index].price;
+        bool dailyLimit = !getDailyLimit(index, _user);
+        if(dailyLimit) {
+            limitStr.push(ShopLimit(_item, _quantity));
+        } else {
+            require(quantity <= 3, "You hit your limit");
+            limitStr[index].quantity = limitMem[index].quantity + _quantity;
+        }
+        require(msg.value == price * _quantity, "Wrong value of ether sent");
         itemInterface.mintForShop( _user, _item, _quantity);
         monsterGameInterface.checkSingleItemOnInventory(_item, _quantity, _user);
-        limit[index].quantity = limit[index].quantity + _quantity;
+        
     }
 
     function tradeItem(uint _trade, uint _quantity, address _user) public payable{
         require(_quantity <= 5, "There's only 5 stocks per trade everyday");
-        uint index = getTradeIndex(_trade, _user);
         tradeDailyLimit[_user].push(TradeLimit(_trade, 0));
         TradeLimit[] storage limit = tradeDailyLimit[_user];
         Trades memory trade = traderTrades[_trade];
 
-        require(limit[index].quantity <= 5, "You hit your limit");
+        require(limit[_trade].quantity <= 5, "You hit your limit");
         require(itemNftInterface.balanceOf(_user, trade.itemTrade) > trade.quantityTrade, "You don't have enough items needed or the trade");
         itemNftInterface.safeTransferFrom(_user, address (this), trade.itemTrade, trade.quantityTrade, "");
-        itemNftInterface.safeTransferFrom(address (this), _user, trade.itemReceived, trade.quantityReceived, ""); 
+        itemInterface.mintForShop(_user, trade.itemReceived, trade.quantityReceived);
+        limit[_trade].quantity = limit[_trade].quantity + _quantity;
     }
 
-    function getItemIndex(uint _item, address _user) internal view returns(uint){
-        uint index;
-        for(uint i; i < dailyShop.length; i++) {
-            if(dailyShop[i].item == _item) {
+    function getItemIndex(uint _item, address _user) internal view returns(uint index){
+        uint shopLength = dailyShop.length;
+        for(uint i; i < shopLength; ++i) {
+            Shop memory shopItem = dailyShop[i].item;
+            if(shopItem == _item) {
                 index = i;
             }
         }
-        return index;
     }
 
-    function getTradeIndex(uint _tradeId, address _user) internal view returns(uint){
-        uint index;
+    function getTradeIndex(uint _tradeId, address _user) internal view returns(uint index){
         TradeLimit[] memory limit = tradeDailyLimit[_user];
-
-        for(uint i; i < limit.length; i++) {
-            if(limit[i].tradeId == _tradeId) {
+        uint tradeLength = limit.length;
+        for(uint i; i < tradeLength; ++i) {
+            TradeLimit memory tradeId = limit[i].tradeId;
+            if(tradeId == _tradeId) {
                 index = i;
             }
         }
+    }
 
-        return index;
+    function getDailyLimit(uint _index, address _user) public view returns(bool result) {
+        ShopLimit[] memory limit = shopDailyLimit[_user];
+        uint length = limit.length;
+        if(length == 0){
+            result = true;
+        } else {
+            result = false;
+        }
     }
 
 

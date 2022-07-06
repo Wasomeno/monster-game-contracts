@@ -23,8 +23,8 @@ contract MonsterGame is IERC721Receiver{
         address owner;
     }
     
-    uint feedingFee = 0.0001 ether;
-    uint nonce = 0;
+    uint public feedingFee = 0.0001 ether;
+    uint private nonce = 0;
 
     mapping(address => Inventory[]) public playerInventory;
     mapping(address => Monster[]) public myMonsterOnBeg;
@@ -44,7 +44,7 @@ contract MonsterGame is IERC721Receiver{
         uint newHunger = hunger  - 10;
         uint expEarned = 4;
         // require(missionStart + 15 minutes <= block.timestamp, "Duration not over yet");
-        require(checkOnBeg(_tokenId, _user) == true, "Your monster is not on beginner mission");
+        require(checkOnBeg(_tokenId, _user), "Your monster is not on beginner mission");
         statsInterface.setCooldown(_tokenId);
         statsInterface.setHunger(_tokenId, newHunger);
         statsInterface.expUp(_tokenId, expEarned);
@@ -62,7 +62,7 @@ contract MonsterGame is IERC721Receiver{
         uint newHunger = hunger  - 10;
         uint expEarned = 8;
         // require(missionStart + 30 minutes <= block.timestamp, "Duration not over yet");
-        require(checkOnInt(_tokenId, _user) == true, "Your monster is not on intermediate mission");
+        require(checkOnInt(_tokenId, _user), "Your monster is not on intermediate mission");
         statsInterface.setCooldown(_tokenId);
         statsInterface.setHunger(_tokenId, newHunger);
         statsInterface.expUp(_tokenId, expEarned);
@@ -72,6 +72,27 @@ contract MonsterGame is IERC721Receiver{
         deleteMonsterOnInt(_tokenId);
     }
 
+    function feedIfPassed(uint _monsterLevel, uint _monsterHunger, uint _amount) internal view returns(bool result){
+        require(msg.value == feedingFee * _monsterLevel * _amount, "Not enough ether");
+        require (_monsterHunger < 100, "Your monster hunger is full");
+        require(_amount + _monsterHunger <= 100, "Too much food for your monster");
+        result = true;
+    }
+
+    function startBeginnerIfPassed(uint _monsterHunger, uint _monsterCooldown, uint _monsterStatus) internal pure returns(bool result){
+        require(_monsterStatus == 0, "Your monster still working on something");
+        require(_monsterCooldown == 0, " Your monster still on cooldown");
+        require(_monsterHunger >= 5, "Not enough hunger");
+        result = true;
+    }
+
+    function startIntermediateIfPassed(uint _monsterHunger, uint _monsterCooldown, uint _monsterStatus, uint _monsterLevel) internal pure returns(bool result){
+        require(_monsterStatus == 0, "Your monster still working on something");
+        require(_monsterLevel > 2, "Your monster does'nt met the minimum requirement");
+        require(_monsterCooldown == 0, " Your monster still on cooldown");
+        require(_monsterHunger >= 10, "Not enough hunger");
+        result = true;
+    }
     
 
     // function getInventory() public view returns(Inventory[] memory) {
@@ -87,14 +108,10 @@ contract MonsterGame is IERC721Receiver{
     //     return result;
     // }
 
-    function feedMonster (uint _tokenId, uint _amount) public payable {
+    function feedMonster (uint _tokenId, uint _amount) public payable{
         uint monsterLevel = statsInterface.getMonsterLevel(_tokenId);
         uint monsterHunger = statsInterface.getMonsterHunger(_tokenId);
-
-        require(msg.value == feedingFee * monsterLevel * _amount, "Not enough ether");
-        require (monsterHunger < 100, "Your monster hunger is full");
-        require(_amount +  monsterHunger <= 100, "Too much food for your monster");
-
+        require(feedIfPassed(monsterLevel, monsterHunger, _amount));
         statsInterface.feedMonster(_tokenId, _amount);
     }
 
@@ -102,12 +119,8 @@ contract MonsterGame is IERC721Receiver{
         uint monsterHunger = statsInterface.getMonsterHunger(_tokenId);
         uint monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
         uint monsterStatus = statsInterface.getMonsterStatus(_tokenId);
-        
         require(monsterInterface.ownerOf(_tokenId) == _user, "It's not your monster");
-        require(monsterStatus == 0, "Your monster still working on something");
-        require(monsterCooldown == 0, " Your monster still on cooldown");
-        require(monsterHunger >= 5, "Not enough hunger");
-
+        require(startBeginnerIfPassed(monsterHunger, monsterCooldown, monsterStatus));
         statsInterface.setStatus(_tokenId, 1);
         myMonsterOnBeg[_user].push(Monster(_tokenId, block.timestamp, _user));
     }
@@ -117,126 +130,127 @@ contract MonsterGame is IERC721Receiver{
         uint monsterHunger = statsInterface.getMonsterHunger(_tokenId);
         uint monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
         uint monsterStatus = statsInterface.getMonsterStatus(_tokenId);
-
         require(monsterInterface.ownerOf(_tokenId) == _user, "It's not your monster");
-        require(monsterStatus == 0, "Your monster still working on something");
-        require(monsterLevel > 2, "Your monster does'nt met the minimum requirement");
-        require(monsterCooldown == 0, " Your monster still on cooldown");
-        require(monsterHunger >= 10, "Not enough hunger");
-
+        require(startIntermediateIfPassed(monsterHunger, monsterCooldown, monsterStatus, monsterLevel));
         statsInterface.setStatus(_tokenId, 1);
         myMonsterOnInt[_user].push(Monster(_tokenId, block.timestamp, _user));
     }
 
-    function checkItemOnInventory(uint[] memory _item, uint[] memory _quantity, address _user) public {
-        Inventory[] storage inventory = playerInventory[_user];
-        for(uint i; i < inventory.length ; i++) {
-            if(inventory[i].itemId == _item[i]) {
-                 inventory[i].quantity = inventory[i].quantity + _quantity[i];
+    function checkItemOnInventory(uint[] memory _item, uint[] memory _quantity, address _user) external {
+        Inventory[] storage inventoryStr = playerInventory[_user];
+        uint length = inventoryStr.length;
+        for(uint i; i < length ; ++i){
+            Inventory[] memory inventoryMem = playerInventory[_user];
+            if(inventoryMem[i].itemId == _item[i]) {
+                uint quantity = inventoryMem[i].quantity;
+                 inventoryStr[i].quantity =  quantity + _quantity[i];
             }
         }
         itemToInventory(_item, _quantity, _user);
     }
 
-    function itemToInventory(uint[] memory _item, uint[] memory _quantity, address _user) public {
+    function itemToInventory(uint[] memory _item, uint[] memory _quantity, address _user) internal {
         Inventory[] storage inventory = playerInventory[_user];
-        for(uint i; i < _item.length ; i++) {
+        for(uint i; i < _item.length ; ++i) {
             inventory.push(Inventory(_item[i], _quantity[i]));
         }
     }
     
-    function checkSingleItemOnInventory(uint _item, uint _quantity, address _user) public {
-        Inventory[] storage inventory = playerInventory[_user];
-        for(uint i; i < inventory.length ; i++) {
-            if(inventory[i].itemId == _item) {
-                 inventory[i].quantity = inventory[i].quantity + _quantity;
+    function checkSingleItemOnInventory(uint _item, uint _quantity, address _user) external {
+        Inventory[] storage inventoryStr = playerInventory[_user];
+        uint length = inventoryStr.length;
+        for(uint i; i < length ; ++i) {
+            Inventory[] memory inventoryMem = playerInventory[_user];
+            if(inventoryMem[i].itemId == _item) {
+                uint quantity = inventoryMem[i].quantity;
+                inventoryStr[i].quantity = quantity + _quantity;
             }
         }
         singleItemToInventory(_item, _quantity, _user);
     }
 
-    function singleItemToInventory(uint _item, uint _quantity, address _user) public {
+    function singleItemToInventory(uint _item, uint _quantity, address _user) internal {
         Inventory[] storage inventory = playerInventory[_user];
         inventory.push(Inventory(_item, _quantity));
     }
 
     function deleteMonsterOnBeg(uint _tokenId, address _user) internal{
-        Monster[] storage myMonster = myMonsterOnBeg[_user];
         uint index;
-        for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i].tokenId == _tokenId) {
+        Monster[] storage myMonsterStr = myMonsterOnBeg[_user];
+        Monster[] memory myMonsterMem = myMonsterOnBeg[_user];
+        uint length = myMonsterMem.length;
+        for(uint i; i < length; ++i) {
+            if(myMonsterMem[i].tokenId == _tokenId) {
                 index = i;
             }
         }
-        myMonster[index] = myMonster[myMonster.length - 1];
-        myMonster.pop();
+        myMonsterStr[index] = myMonsterMem[length - 1];
+        myMonsterStr.pop();
     }
 
     function deleteMonsterOnInt(uint _tokenId) internal{
-        Monster[] storage myMonster = myMonsterOnInt[msg.sender];
         uint index;
-        for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i].tokenId == _tokenId) {
+        Monster[] storage myMonsterStr = myMonsterOnInt[msg.sender];
+        Monster[] memory myMonsterMem = myMonsterOnInt[msg.sender];
+        uint length = myMonsterMem.length;
+        for(uint i; i <length; ++i) {
+            uint tokenId = myMonsterMem[i].tokenId; 
+            if(tokenId == _tokenId) {
                 index = i;
             }
         }
-        myMonster[index] = myMonster[myMonster.length - 1];
-        myMonster.pop();
+        myMonsterStr[index] = myMonsterMem[length - 1];
+        myMonsterStr.pop();
     }
 
-    function checkOnBeg(uint _tokenId, address _user) internal view returns(bool){
-        bool result;
-        Monster[] storage myMonster = myMonsterOnBeg[_user];
-        for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i].tokenId == _tokenId) {
+    function checkOnBeg(uint _tokenId, address _user) internal view returns(bool result){
+        Monster[] memory myMonster = myMonsterOnBeg[_user];
+        uint length = myMonster.length;
+        for(uint i; i < length; ++i) {
+            uint tokenId = myMonster[i].tokenId;
+            if(tokenId == _tokenId) {
                 result = true;
             }
         }
-        
-        return result;
     }
 
-    function checkOnInt(uint _tokenId, address _user) internal view returns(bool){
-        bool result;
-        Monster[] storage myMonster = myMonsterOnInt[_user];
-        for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i].tokenId == _tokenId) {
+    function checkOnInt(uint _tokenId, address _user) internal view returns(bool result){
+        Monster[] memory myMonster = myMonsterOnInt[_user];
+        uint length = myMonster.length;
+        for(uint i; i < length; ++i) {
+             uint tokenId = myMonster[i].tokenId;
+            if(tokenId == _tokenId) {
                 result = true;
             }
         }
-        
-        return result;
     }
 
-    function getMonsterIndexInt(uint _tokenId, address _user) internal view returns(uint){
-        uint index;
-        Monster[] storage myMonster = myMonsterOnInt[_user];
-        for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i].tokenId == _tokenId) {
+    function getMonsterIndexInt(uint _tokenId, address _user) internal view returns(uint index){
+        Monster[] memory myMonster = myMonsterOnInt[_user];
+        uint length = myMonster.length;
+        for(uint i; i < length; ++i) {
+             uint tokenId = myMonster[i].tokenId;
+            if(tokenId == _tokenId) {
                 index = i;
             }
         }
-        
-        return index;
     }
 
-    function getMonsterIndexBeg(uint _tokenId, address _user) internal view returns(uint){
-        uint index;
-        Monster[] storage myMonster = myMonsterOnBeg[_user];
-        for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i].tokenId == _tokenId) {
+    function getMonsterIndexBeg(uint _tokenId, address _user) internal view returns(uint index){
+        Monster[] memory myMonster = myMonsterOnBeg[_user];
+        uint length = myMonster.length;
+        for(uint i; i < length; ++i) {
+             uint tokenId = myMonster[i].tokenId;
+            if(tokenId == _tokenId) {
                 index = i;
             }
         }
-        
-        return index;
     }
 
 
-    function randomNumber() internal returns(uint){
-        uint number = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender, nonce))) % 100;
+    function randomNumber() internal returns(uint number){
+        number = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender, nonce))) % 100;
         nonce ++;
-        return number;
     }
 
     function onERC721Received(

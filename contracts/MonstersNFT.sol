@@ -31,7 +31,7 @@ contract Monsters is ERC721, Ownable {
     function summon(uint _quantity) public payable{
         require(_quantity <= 5, "You can't mint more than 5");
         require(msg.value == _quantity * price, "Wrong value of ether sent");
-        for(uint i; i < _quantity; i++) {
+        for(uint i; i < _quantity; ++i) {
             _safeMint(msg.sender, monsterPopulation);
             monsterStats[monsterPopulation] = Stats(1, 30, 0, 15, 0, 0);
             monsterPopulation++;
@@ -40,9 +40,10 @@ contract Monsters is ERC721, Ownable {
 
     function getMyMonster(address _to) public view returns(uint[] memory){
         uint[] memory monsters = new uint[](balanceOf(_to));
+        uint _monsterPopulation = monsterPopulation;
         uint index = 0;
 
-        for(uint i; i < monsterPopulation; i++) {
+        for(uint i; i < _monsterPopulation; i++) {
             if(ownerOf(i) == _to) {
                 monsters[index] = i;
             }

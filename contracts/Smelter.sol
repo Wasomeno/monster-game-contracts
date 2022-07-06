@@ -24,7 +24,6 @@ contract Smelter is ERC1155Receiver{
     function smelt(address _user, uint _quantity) public{
         require(itemInterface.balanceOf(_user, 4) > 0,"You don't have a any crystal to be smelt");
         itemInterface.safeTransferFrom(_user, address (this), 4, _quantity, "");
-
         smeltDetails[_user] = Smelt(_quantity, block.timestamp);
     }
 

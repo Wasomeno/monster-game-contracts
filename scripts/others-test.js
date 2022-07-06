@@ -105,29 +105,31 @@ async function main() {
 
   console.log("=== Buy and Trade items on Trader ===========");
 
-  await trader.buyItem(0, 2, user1.address, {
-    value: hre.ethers.utils.parseEther("0.0002"),
-  });
+  // await trader.buyItem(0, 2, user1.address, {
+  //   value: hre.ethers.utils.parseEther("0.0002"),
+  // });
 
-  const inventoryAfterBuy0 = await monsterGame.playerInventory(
-    user1.address,
-    0
-  );
-  const inventoryAfterBuy1 = await monsterGame.playerInventory(
-    user1.address,
-    1
-  );
+  // const inventoryAfterBuy0 = await monsterGame.playerInventory(
+  //   user1.address,
+  //   0
+  // );
+  // const inventoryAfterBuy1 = await monsterGame.playerInventory(
+  //   user1.address,
+  //   1
+  // );
 
-  console.log("");
+  // console.log("");
 
-  console.log(
-    "User 1 inventory after buy: " +
-      "( " +
-      inventoryAfterBuy0 +
-      " " +
-      inventoryAfterBuy1 +
-      " )"
-  );
+  // console.log(
+  //   "User 1 inventory after buy: " +
+  //     "( " +
+  //     inventoryAfterBuy0 +
+  //     " " +
+  //     inventoryAfterBuy1 +
+  //     " )"
+  // );
+
+  console.log(await trader.getDailyLimit(0, user1.address));
 }
 
 // We recommend this pattern to be able to use async/await everywhere
