@@ -60,16 +60,15 @@ contract Dungeon {
         deleteMonsterOnBoss(_tokenId, _user);
     }
 
-    function checkOnBoss(uint _tokenId, address _user) internal view returns(bool){
-        bool result;
-        uint[] storage myMonster = myMonsterOnBoss[_user];
-        for(uint i; i < myMonster.length; i++) {
-            if(myMonster[i] == _tokenId) {
+    function checkOnBoss(uint _tokenId, address _user) internal view returns(bool result){
+        uint[] memory myMonster = myMonsterOnBoss[_user];
+        uint length = myMonster.length;
+        for(uint i; i < length; ++i) {
+            uint monster = myMonster[i];
+            if(monster == _tokenId) {
                 result = true;
             }
         }
-        
-        return result;
     }
 
     function deleteMonsterOnBoss(uint _tokenId, address _user) internal{

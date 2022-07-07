@@ -91,7 +91,7 @@ contract Trader is ERC1155Receiver{
     function getItemIndex(uint _item, address _user) internal view returns(uint index){
         uint shopLength = dailyShop.length;
         for(uint i; i < shopLength; ++i) {
-            Shop memory shopItem = dailyShop[i].item;
+            uint shopItem = dailyShop[i].item;
             if(shopItem == _item) {
                 index = i;
             }
@@ -102,7 +102,7 @@ contract Trader is ERC1155Receiver{
         TradeLimit[] memory limit = tradeDailyLimit[_user];
         uint tradeLength = limit.length;
         for(uint i; i < tradeLength; ++i) {
-            TradeLimit memory tradeId = limit[i].tradeId;
+            uint tradeId = limit[i].tradeId;
             if(tradeId == _tradeId) {
                 index = i;
             }
