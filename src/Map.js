@@ -1,9 +1,16 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const Map = () => {
   return (
-    <div className="container-fluid h-100">
+    <motion.div
+      className="container-fluid h-100"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ type: "tween", duration: 1 }}
+    >
       <div className="row justify-content-center">
         <h1>Map</h1>
       </div>
@@ -30,7 +37,7 @@ const Map = () => {
           </Link>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
