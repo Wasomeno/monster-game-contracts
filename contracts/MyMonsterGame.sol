@@ -65,7 +65,10 @@ contract MonsterGame is IERC721Receiver {
         uint256 hunger = statsInterface.getMonsterHunger(_tokenId);
         uint256 newHunger = hunger - 10;
         uint256 expEarned = 8;
-        // require(missionStart + 30 minutes <= block.timestamp, "Duration not over yet");
+        require(
+            missionStart + 30 minutes <= block.timestamp,
+            "Duration not over yet"
+        );
         require(
             checkOnInt(_tokenId, _user),
             "Your monster is not on intermediate mission"
