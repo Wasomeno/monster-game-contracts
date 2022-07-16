@@ -54,24 +54,37 @@ contract Trader is ERC1155Receiver {
         itemNftInterface = IERC1155(_items);
     }
 
+    modifier buyIfBelowLimit(uint256[] calldata _quantity) {
+        uint256 arrLength = _quantity.length;
+        for (uint256 i; i < arrLength; ++i) {
+            require(
+                _quantity[i] <= 3,
+                "There's only 3 stocks per item everyday"
+            );
+        }
+        _;
+    }
+
     function buyItem(
         uint256[] calldata _item,
         uint256[] calldata _quantity,
         address _user
-    ) external payable {
-        require(_quantity <= 3, "There's only 3 stocks per item everyday");
+    ) external payable buyIfBelowLimit(_quantity) {
         ShopLimit[] storage limitStr = shopDailyLimit[_user];
         ShopLimit[] memory limitMem = shopDailyLimit[_user];
-        uint256 price = getTotalPrice(_user, _item, _quantity);
-        bool dailyLimit = !getDailyLimit(index, _user);
+        uint256 total = getTotalPrice(_user, _item, _quantity);
+        bool dailyLimit = limitMem.length == 0;
         uint256 arrLength = _quantity.length;
         if (dailyLimit) {
-            limitStr.push(ShopLimit(_item, _quantity));
+            for (uint256 i; i < arrLength; ++i) {
+                uint256 item = _item[i];
+                uint256 quantity = _quantity[i];
+                limitStr.push(ShopLimit(item, quantity));
+            }
         } else {
-            require(quantity <= 3, "You hit your limit");
-            limitStr[index].quantity = limitMem[index].quantity + _quantity;
+            addUserDailyLimit(_user, _item, _quantity);
         }
-        require(msg.value == price * _quantity, "Wrong value of ether sent");
+        require(msg.value >= total, "Wrong value of ether sent");
         itemInterface.mintForShop(_user, _item, _quantity);
         monsterGameInterface.checkItemOnInventory(_item, _quantity, _user);
     }
@@ -135,7 +148,7 @@ contract Trader is ERC1155Receiver {
         address _user,
         uint256[] memory _item,
         uint256[] memory _quantity
-    ) internal returns (uint256 total) {
+    ) internal view returns (uint256 total) {
         ShopLimit[] memory limitMem = shopDailyLimit[_user];
         uint256 arrLength = _item.length;
         uint256 totalTemp;
@@ -150,17 +163,19 @@ contract Trader is ERC1155Receiver {
         total = totalTemp;
     }
 
-    function getDailyLimit(uint256 _index, address _user)
-        public
-        view
-        returns (bool result)
-    {
-        ShopLimit[] memory limit = shopDailyLimit[_user];
-        uint256 length = limit.length;
-        if (length == 0) {
-            result = true;
-        } else {
-            result = false;
+    function addUserDailyLimit(
+        address _user,
+        uint256[] memory _item,
+        uint256[] memory _quantity
+    ) internal {
+        uint256 arrLength = _item.length;
+        ShopLimit[] storage limitStr = shopDailyLimit[_user];
+        ShopLimit[] memory limitMem = shopDailyLimit[_user];
+        for (uint256 i; i < arrLength; ++i) {
+            uint256 index = getItemIndex(_item[i]);
+            uint256 quantity = limitMem[index].quantity;
+            require(_quantity[i] + quantity <= 3, "You hit your limit");
+            limitStr[index].quantity = quantity + _quantity[i];
         }
     }
 

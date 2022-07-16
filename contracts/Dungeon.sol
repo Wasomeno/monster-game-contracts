@@ -94,9 +94,11 @@ contract Dungeon {
 
     function deleteMonsterOnBoss(uint256 _tokenId, address _user) internal {
         uint256[] storage myMonster = myMonsterOnBoss[_user];
-        uint256[] memory myMonsterMem = myMonsterOnBoss[_user].length;
+        uint256[] memory myMonsterMem = myMonsterOnBoss[_user];
+        uint256 arrLength = myMonsterMem.length;
         uint256 index;
-        for (uint256 i; i < myMonster.length; ++i) {
+        for (uint256 i; i < arrLength; ++i) {
+            uint256 monster = myMonsterMem[i];
             if (myMonster[i] == _tokenId) {
                 index = i;
             }
