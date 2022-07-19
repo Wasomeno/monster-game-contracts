@@ -179,6 +179,10 @@ contract Trader is ERC1155Receiver {
         }
     }
 
+    function getDailyShop() external view returns (Shop[] memory) {
+        return dailyShop;
+    }
+
     function onERC1155BatchReceived(
         address _operator,
         address _from,
