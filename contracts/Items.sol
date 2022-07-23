@@ -74,65 +74,35 @@ contract Items is ERC1155 {
         _mint(_user, _id, _quantity, "");
     }
 
-    function newItemRatesSet(uint256 _id, uint256[] memory _rate) public {
+    function newItemRatesSet(uint256 _id, uint256[] memory _rate) external {
         for (uint256 i; i < _rate.length; i++) {
             itemRateSet[_id].push(_rate[i]);
         }
     }
 
-    function newItemsSet(uint256 _id, uint256[] memory _item) public {
+    function newItemsSet(uint256 _id, uint256[] memory _item) external {
         for (uint256 i; i < _item.length; i++) {
             itemSet[_id].push(_item[i]);
         }
     }
 
-    function beginnerMissionReward(address _user, uint256 _odds) public {
+    function beginnerMissionReward(address _user, uint256 _odds) external {
         if (_odds <= 60 && 0 <= _odds) {
             _mintBatch(_user, itemSet[0], itemRateSet[0], "");
-            gameInterface.checkItemOnInventory(
-                itemSet[0],
-                itemRateSet[0],
-                _user
-            );
         } else if (_odds <= 90 && 70 <= _odds) {
             _mintBatch(_user, itemSet[1], itemRateSet[1], "");
-            gameInterface.checkItemOnInventory(
-                itemSet[1],
-                itemRateSet[1],
-                _user
-            );
         } else {
             _mintBatch(_user, itemSet[2], itemRateSet[2], "");
-            gameInterface.checkItemOnInventory(
-                itemSet[2],
-                itemRateSet[2],
-                _user
-            );
         }
     }
 
-    function intermediateMissionReward(address _user, uint256 _odds) public {
+    function intermediateMissionReward(address _user, uint256 _odds) external {
         if (_odds <= 60 && 0 <= _odds) {
             _mintBatch(_user, itemSet[3], itemRateSet[3], "");
-            gameInterface.checkItemOnInventory(
-                itemSet[3],
-                itemRateSet[3],
-                _user
-            );
         } else if (_odds <= 90 && 70 <= _odds) {
             _mintBatch(_user, itemSet[4], itemRateSet[4], "");
-            gameInterface.checkItemOnInventory(
-                itemSet[4],
-                itemRateSet[4],
-                _user
-            );
         } else {
             _mintBatch(_user, itemSet[5], itemRateSet[5], "");
-            gameInterface.checkItemOnInventory(
-                itemSet[5],
-                itemRateSet[5],
-                _user
-            );
         }
     }
 
@@ -140,21 +110,24 @@ contract Items is ERC1155 {
         address _user,
         uint256 _odds,
         uint256 _chance
-    ) public {
+    ) external {
         if (_odds < _chance) {
             _mintBatch(_user, bossRewardSet[0], bossRateSet[0], "");
-            gameInterface.checkItemOnInventory(
-                bossRewardSet[0],
-                bossRateSet[0],
-                _user
-            );
         } else {
             _mintBatch(_user, bossRewardSet[1], bossRateSet[1], "");
-            gameInterface.checkItemOnInventory(
-                bossRewardSet[1],
-                bossRateSet[1],
-                _user
-            );
         }
+    }
+
+    function getInventory(address _user)
+        external
+        view
+        returns (uint256[] memory inventory)
+    {
+        uint256[] memory inventoryTemp = new uint256[](4);
+        for (uint256 i; i < 4; ++i) {
+            inventoryTemp[i] = (balanceOf(_user, i));
+        }
+
+        inventory = inventoryTemp;
     }
 }

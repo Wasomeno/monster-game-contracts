@@ -25,4 +25,9 @@ interface IItems {
         uint256 _id,
         uint256 _quantity
     ) external;
+
+    function getInventory(address _user)
+        external
+        view
+        returns (uint256[] memory inventory);
 }

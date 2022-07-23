@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Receiver.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "./IItems.sol";
 import "./IMonsterGame.sol";
 
-contract Trader is ERC1155Receiver {
+contract Trader is ERC1155Holder {
     struct Shop {
         uint256 item;
         uint256 quantity;
@@ -31,7 +31,7 @@ contract Trader is ERC1155Receiver {
 
     IItems itemInterface;
     IMonsterGame monsterGameInterface;
-    IERC1155 itemNftInterface;
+    IERC1155 public itemNftInterface;
     Shop[] public dailyShop;
 
     mapping(uint256 => Trades) public traderTrades;
@@ -43,7 +43,7 @@ contract Trader is ERC1155Receiver {
         dailyShop.push(Shop(1, 3, (0.0001 * 1 ether)));
         dailyShop.push(Shop(2, 3, (0.0002 * 1 ether)));
 
-        traderTrades[0] = Trades(0, 30, 2, 1);
+        traderTrades[0] = Trades(0, 5, 2, 1);
         traderTrades[1] = Trades(0, 50, 3, 1);
         traderTrades[2] = Trades(1, 5, 0, 30);
     }
@@ -86,36 +86,45 @@ contract Trader is ERC1155Receiver {
         }
         require(msg.value >= total, "Wrong value of ether sent");
         itemInterface.mintForShop(_user, _item, _quantity);
-        monsterGameInterface.checkItemOnInventory(_item, _quantity, _user);
+    }
+
+    function balanceOf(address _user, uint256 _tokenId)
+        external
+        view
+        returns (uint256 balance)
+    {
+        balance = itemNftInterface.balanceOf(_user, 0);
+    }
+
+    function isApproved(address _user) external view returns (bool result) {
+        result = itemNftInterface.isApprovedForAll(address(this), _user);
     }
 
     function tradeItem(
         uint256 _trade,
         uint256 _quantity,
         address _user
-    ) external payable {
+    ) external {
         require(_quantity <= 5, "There's only 5 stocks per trade everyday");
         tradeDailyLimit[_user].push(TradeLimit(_trade, 0));
         TradeLimit[] storage limit = tradeDailyLimit[_user];
         Trades memory trade = traderTrades[_trade];
+        uint256 tradeQuantity = trade.quantityTrade * _quantity;
+        uint256 receiveQuantity = trade.quantityReceived * _quantity;
         require(limit[_trade].quantity <= 5, "You hit your limit");
         require(
             itemNftInterface.balanceOf(_user, trade.itemTrade) >
                 trade.quantityTrade,
-            "You don't have enough items needed or the trade"
+            "Not enough items needed"
         );
         itemNftInterface.safeTransferFrom(
             _user,
             address(this),
             trade.itemTrade,
-            trade.quantityTrade,
+            tradeQuantity,
             ""
         );
-        itemInterface.mintForTrade(
-            _user,
-            trade.itemReceived,
-            trade.quantityReceived
-        );
+        itemInterface.mintForTrade(_user, trade.itemReceived, receiveQuantity);
         limit[_trade].quantity = limit[_trade].quantity + _quantity;
     }
 
@@ -149,12 +158,11 @@ contract Trader is ERC1155Receiver {
         uint256[] memory _item,
         uint256[] memory _quantity
     ) internal view returns (uint256 total) {
-        ShopLimit[] memory limitMem = shopDailyLimit[_user];
         uint256 arrLength = _item.length;
         uint256 totalTemp;
         for (uint256 i; i < arrLength; ++i) {
             uint256 index = getItemIndex(_item[i]);
-            uint256 quantity = limitMem[index].quantity;
+            uint256 quantity = _quantity[i];
             uint256 price = dailyShop[index].price;
 
             totalTemp += price * quantity;
@@ -181,34 +189,6 @@ contract Trader is ERC1155Receiver {
 
     function getDailyShop() external view returns (Shop[] memory) {
         return dailyShop;
-    }
-
-    function onERC1155BatchReceived(
-        address _operator,
-        address _from,
-        uint256[] calldata _ids,
-        uint256[] calldata _values,
-        bytes calldata _data
-    ) external pure override returns (bytes4) {
-        bytes4(
-            keccak256(
-                "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"
-            )
-        );
-    }
-
-    function onERC1155Received(
-        address _operator,
-        address _from,
-        uint256 _id,
-        uint256 _value,
-        bytes calldata _data
-    ) external pure override returns (bytes4) {
-        bytes4(
-            keccak256(
-                "onERC1155Received(address,address,uint256,uint256,bytes)"
-            )
-        );
     }
 
     receive() external payable {}

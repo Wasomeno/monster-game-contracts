@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity >=0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -11,18 +11,12 @@ contract MonsterGame is IERC721Receiver {
     IMonster public statsInterface;
     IItems public itemsInterface;
 
-    struct Inventory {
-        uint256 itemId;
-        uint256 quantity;
-    }
-
     struct Monster {
         uint256 tokenId;
         uint256 missionStart;
         address owner;
     }
 
-    mapping(address => Inventory[]) public playerInventory;
     mapping(address => Monster[]) public myMonsterOnBeg;
     mapping(address => Monster[]) public myMonsterOnInt;
 
@@ -168,60 +162,6 @@ contract MonsterGame is IERC721Receiver {
         );
         statsInterface.setStatus(_tokenId, 1);
         myMonsterOnInt[_user].push(Monster(_tokenId, block.timestamp, _user));
-    }
-
-    function checkItemOnInventory(
-        uint256[] memory _item,
-        uint256[] memory _quantity,
-        address _user
-    ) external {
-        Inventory[] storage inventoryStr = playerInventory[_user];
-        uint256 length = inventoryStr.length;
-        for (uint256 i; i < length; ++i) {
-            Inventory[] memory inventoryMem = playerInventory[_user];
-            if (inventoryMem[i].itemId == _item[i]) {
-                uint256 quantity = inventoryMem[i].quantity;
-                inventoryStr[i].quantity = quantity + _quantity[i];
-            }
-        }
-        itemToInventory(_item, _quantity, _user);
-    }
-
-    function itemToInventory(
-        uint256[] memory _item,
-        uint256[] memory _quantity,
-        address _user
-    ) internal {
-        Inventory[] storage inventory = playerInventory[_user];
-        for (uint256 i; i < _item.length; ++i) {
-            inventory.push(Inventory(_item[i], _quantity[i]));
-        }
-    }
-
-    function checkSingleItemOnInventory(
-        uint256 _item,
-        uint256 _quantity,
-        address _user
-    ) external {
-        Inventory[] storage inventoryStr = playerInventory[_user];
-        uint256 length = inventoryStr.length;
-        for (uint256 i; i < length; ++i) {
-            Inventory[] memory inventoryMem = playerInventory[_user];
-            if (inventoryMem[i].itemId == _item) {
-                uint256 quantity = inventoryMem[i].quantity;
-                inventoryStr[i].quantity = quantity + _quantity;
-            }
-        }
-        singleItemToInventory(_item, _quantity, _user);
-    }
-
-    function singleItemToInventory(
-        uint256 _item,
-        uint256 _quantity,
-        address _user
-    ) internal {
-        Inventory[] storage inventory = playerInventory[_user];
-        inventory.push(Inventory(_item, _quantity));
     }
 
     function deleteMonsterOnBeg(uint256 _tokenId, address _user) internal {
