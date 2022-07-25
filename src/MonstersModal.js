@@ -3,11 +3,14 @@ import ReactDom from "react-dom";
 import { ethers } from "ethers";
 import { motion } from "framer-motion";
 import MonsterABI from "../src/api/Monsters.json";
+import MonsterDetails from "./MonsterDetails";
 
 const MonsterContract = "0xBe145c9F694867BaC23Ec7e655A1A3AaE8047F35";
 
 const MonstersModal = ({ showMonsters, setShowMonsters }) => {
   const [monsters, setMonsters] = useState([]);
+  const [showDetails, setShowDetails] = useState(false);
+  const [tokenId, setTokenId] = useState("");
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const monsterContract = new ethers.Contract(
@@ -19,6 +22,11 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
     await monsterContract.getMyMonster(signer.getAddress()).then((response) => {
       setMonsters(response);
     });
+  }
+
+  function monsterDetails(tokenId) {
+    setShowDetails(true);
+    setTokenId(tokenId);
   }
 
   useEffect(() => {
@@ -44,17 +52,28 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
         exit={{ opacity: 0 }}
         transition={{ type: "tween", duration: 0.25 }}
       >
-        <div className="row justify-content-center p-3">
-          {monsters.map((monster, index) => (
-            <div className="card col-2 mx-1">
-              <div className="card-body">
-                <h5 className="card-title" key={index}>
-                  {monster.toString()}
-                </h5>
+        {!showDetails ? (
+          <div className="row justify-content-center p-3">
+            {monsters.map((monster, index) => (
+              <div
+                className="card col-2 mx-1"
+                key={index}
+                onClick={() => monsterDetails(monster.toString())}
+              >
+                <div className="card-body">
+                  <h5 className="card-title">{monster.toString()}</h5>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <MonsterDetails
+            tokenId={tokenId}
+            setShowDetails={setShowDetails}
+            setTokenId={setTokenId}
+            showDetails={showDetails}
+          />
+        )}
       </motion.div>
     </>,
     document.getElementById("modal")
