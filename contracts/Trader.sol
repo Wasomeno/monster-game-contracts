@@ -88,18 +88,6 @@ contract Trader is ERC1155Holder {
         itemInterface.mintForShop(_user, _item, _quantity);
     }
 
-    function balanceOf(address _user, uint256 _tokenId)
-        external
-        view
-        returns (uint256 balance)
-    {
-        balance = itemNftInterface.balanceOf(_user, 0);
-    }
-
-    function isApproved(address _user) external view returns (bool result) {
-        result = itemNftInterface.isApprovedForAll(address(this), _user);
-    }
-
     function tradeItem(
         uint256 _trade,
         uint256 _quantity,

@@ -123,8 +123,8 @@ contract Items is ERC1155 {
         view
         returns (uint256[] memory inventory)
     {
-        uint256[] memory inventoryTemp = new uint256[](4);
-        for (uint256 i; i < 4; ++i) {
+        uint256[] memory inventoryTemp = new uint256[](5);
+        for (uint256 i; i < 5; ++i) {
             inventoryTemp[i] = (balanceOf(_user, i));
         }
 
