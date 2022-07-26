@@ -253,6 +253,24 @@ contract MonsterGame is IERC721Receiver {
         }
     }
 
+    function getMonstersOnBeg(address _user)
+        external
+        view
+        returns (Monster[] memory)
+    {
+        Monster[] memory monsters = myMonsterOnBeg[_user];
+        return monsters;
+    }
+
+    function getMonstersOnInt(address _user)
+        external
+        view
+        returns (Monster[] memory)
+    {
+        Monster[] memory monsters = myMonsterOnInt[_user];
+        return monsters;
+    }
+
     function randomNumber() internal returns (uint256 number) {
         number =
             uint256(
