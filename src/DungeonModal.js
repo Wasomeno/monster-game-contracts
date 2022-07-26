@@ -1,7 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { ethers } from "ethers";
 import ReactDom from "react-dom";
 import MissionsModal from "./MissionsModal";
+import DungeonABI from "../src/api/Dungeon.json";
+import MonsterABI from "../src/api/Monsters.json";
+
+const DungeonContract = "0x3B8887D67BF775fF4D68C2b15266799e96CD8cC7";
+const MonsterContract = "0xBe145c9F694867BaC23Ec7e655A1A3AaE8047F35";
 
 const DungeonModal = ({
   showDungeon,
@@ -11,6 +17,68 @@ const DungeonModal = ({
 }) => {
   const [showBeginner, setShowBeginner] = useState(false);
   const [showInter, setShowInter] = useState(false);
+  const [monsters, setMonsters] = useState([]);
+  const [onDungeon, setOnDungeon] = useState([]);
+
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  const signer = provider.getSigner();
+  const dungeonContract = new ethers.Contract(
+    DungeonContract,
+    DungeonABI.abi,
+    signer
+  );
+  const monsterContract = new ethers.Contract(
+    MonsterContract,
+    MonsterABI.abi,
+    signer
+  );
+
+  async function getMonsters() {
+    let monstersTemp = [];
+    const myMonsters = await monsterContract.getMyMonster(signer.getAddress());
+    for (let i = 0; i < myMonsters.length; i++) {
+      const status = await monsterContract.getMonsterStatus(myMonsters[i]);
+      if (status.toString() === "0") {
+        monstersTemp.push(myMonsters[i]);
+      }
+    }
+    setMonsters(monstersTemp);
+  }
+
+  async function getMonstersOnDungeon() {
+    await dungeonContract
+      .getMyMonsters(signer.getAddress())
+      .then((response) => {
+        setOnDungeon(response);
+      });
+  }
+
+  async function sendToBossFight(monster) {
+    await dungeonContract
+      .bossFight(monster, signer.getAddress())
+      .then((response) => {
+        provider.waitForTransaction(response.hash).then(() => {
+          getMonsters();
+          getMonstersOnDungeon();
+        });
+      });
+  }
+
+  async function claimBossFight(monster) {
+    await dungeonContract
+      .claimBossFight(monster, signer.getAddress())
+      .then((response) => {
+        provider.waitForTransaction(response.hash).then(() => {
+          getMonsters();
+          getMonstersOnDungeon();
+        });
+      });
+  }
+
+  useEffect(() => {
+    getMonsters();
+    getMonstersOnDungeon();
+  }, []);
 
   if (!showDungeon && !showMission) return;
   return ReactDom.createPortal(
@@ -35,28 +103,65 @@ const DungeonModal = ({
             transition={{ type: "tween", duration: 0.25 }}
           >
             <div className="row justify-content-center">
+              <h2 className="text-center" id="modal-title">
+                Dungeon
+              </h2>
               <div className="col">
-                <h2 id="modal-title">Your Monster</h2>
+                <h3 id="modal-title" className="text-center">
+                  Your Monster
+                </h3>
                 <div className="row justify-content-center">
-                  <div className="card col-3">
-                    <img src="..." className="card-img-top" alt="..." />
-                    <div className="card-body">
-                      <h5 className="card-title">Monster #1</h5>
-                      <button className="btn btn-success">Send</button>
-                    </div>
-                  </div>
+                  {monsters.length < 1 ? (
+                    <h5 className="text-center" id="modal-title">
+                      No Monsters in Inventory
+                    </h5>
+                  ) : (
+                    monsters.map((monster, index) => (
+                      <div className="card col-3 mx-1" key={index}>
+                        <img src="..." className="card-img-top" alt="..." />
+                        <div className="d-flex flex-column justify-content-center">
+                          <h5 className="card-title text-center col">
+                            {monster.toString()}
+                          </h5>
+                          <button
+                            className="btn btn-success text-center col m-3"
+                            onClick={() => sendToBossFight(monster)}
+                          >
+                            Send
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
               <div className="col">
-                <h2 id="modal-title">Monster on Dungeon</h2>
+                <h3 id="modal-title" className="text-center">
+                  Monster on Dungeon
+                </h3>
                 <div className="row justify-content-center">
-                  <div className="card col-3">
-                    <img src="..." className="card-img-top" alt="..." />
-                    <div className="card-body">
-                      <h5 className="card-title">Monster #1</h5>
-                      <button className="btn btn-danger">Home</button>
-                    </div>
-                  </div>
+                  {onDungeon.length < 1 ? (
+                    <h5 id="modal-title" className="text-center">
+                      No Monster on Dungeon
+                    </h5>
+                  ) : (
+                    onDungeon.map((monster, index) => (
+                      <div className="card col-3 mx-1" key={index}>
+                        <img src="..." className="card-img-top" alt="..." />
+                        <div className="card-body">
+                          <h5 className="card-title text-center">
+                            {monster.toString()}
+                          </h5>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => claimBossFight(monster)}
+                          >
+                            Home
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
