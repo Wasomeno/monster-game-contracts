@@ -107,6 +107,10 @@ contract Dungeon {
         myMonster.pop();
     }
 
+    function getMyMonsters(address _user) external view returns(uint[] memory monsters) {
+        monsters = myMonsterOnBoss[_user];
+    }
+
     function randomNumber() internal returns (uint256) {
         uint256 number = uint256(
             keccak256(abi.encodePacked(block.timestamp, msg.sender, nonce))
