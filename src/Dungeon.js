@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import NotConnected from "./NotConnected";
 import DungeonModal from "./DungeonModal";
@@ -7,32 +7,41 @@ const Dungeon = ({ account, setAccount }) => {
   const isConnected = Boolean(account[0]);
   const [showDungeon, setShowDungeon] = useState(false);
   const [showMission, setShowMission] = useState(false);
+  const [image, setImage] = useState(null);
+  const canvasRef = useRef(null);
 
-  async function getCanvas() {
-    const canvas = document.querySelector(".dungeon-canvas");
-    canvas.width = 1000;
-    canvas.height = window.innerHeight;
-    const c = canvas.getContext("2d");
-    const image = new Image();
-    image.src = "/dungeon.png";
-    var wrh = image.width / image.height;
-    var newWidth = canvas.width;
-    var newHeight = newWidth / wrh;
-    if (newHeight > canvas.height) {
-      newHeight = canvas.height;
-      newWidth = newHeight * wrh;
-    }
-    var xOffset = newWidth < canvas.width ? (canvas.width - newWidth) / 2 : 0;
-    var yOffset =
-      newHeight < canvas.height ? (canvas.height - newHeight) / 2 : 0;
-    image.onload = () => {
-      c.drawImage(image, xOffset, yOffset, newWidth, newHeight);
-    };
-  }
+  const drawCanvas = (context, xOffset, yOffset, newWidth, newHeight) => {
+    context.drawImage(image, xOffset, yOffset, newWidth, newHeight);
+  };
 
   useEffect(() => {
-    getCanvas();
-  }, []);
+    if (isConnected) {
+      const dungeonImage = new Image();
+      dungeonImage.src = "/dungeon.png";
+      dungeonImage.onload = () => {
+        setImage(dungeonImage);
+      };
+    }
+  }, [isConnected]);
+
+  useEffect(() => {
+    if (image && canvasRef) {
+      const canvas = canvasRef.current;
+      const c = canvas.getContext("2d");
+      var wrh = image.width / image.height;
+      var newWidth = canvas.width;
+      var newHeight = newWidth / wrh;
+      if (newHeight > canvas.height) {
+        newHeight = canvas.height;
+        newWidth = newHeight * wrh;
+      }
+      var xOffset = newWidth < canvas.width ? (canvas.width - newWidth) / 2 : 0;
+      var yOffset =
+        newHeight < canvas.height ? (canvas.height - newHeight) / 2 : 0;
+      drawCanvas(c, xOffset, yOffset, newWidth, newHeight);
+    }
+  }, [drawCanvas]);
+
   return (
     <motion.div
       id="dungeon-container"
@@ -44,7 +53,12 @@ const Dungeon = ({ account, setAccount }) => {
     >
       {isConnected ? (
         <>
-          <canvas className="dungeon-canvas" />
+          <canvas
+            className="dungeon-canvas"
+            ref={canvasRef}
+            width={1000}
+            height={window.innerHeight}
+          />
           <div id="dungeon-buttons" className="row justify-content-center">
             <div className="col-3">
               <button

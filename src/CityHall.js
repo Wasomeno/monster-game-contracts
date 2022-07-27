@@ -7,40 +7,41 @@ const CityHall = ({ account, setAccount }) => {
   const isConnected = Boolean(account[0]);
   const [shopShow, setShopShow] = useState(false);
   const [traderShow, setTraderShow] = useState(false);
+  const [image, setImage] = useState(null);
   const canvasRef = useRef(null);
-  const contextRef = useRef(null);
-  const image = new Image();
-  image.src = "/hall.png";
 
-  function getCanvas() {
-    var wrh = image.width / image.height;
-    var newWidth = canvasRef.current.width;
-    var newHeight = newWidth / wrh;
-    if (newHeight > canvasRef.current.height) {
-      newHeight = canvasRef.current.height;
-      newWidth = newHeight * wrh;
-    }
-    var xOffset =
-      newWidth < canvasRef.current.width
-        ? (canvasRef.current.width - newWidth) / 2
-        : 0;
-    var yOffset =
-      newHeight < canvasRef.current.height
-        ? (canvasRef.current.height - newHeight) / 2
-        : 0;
-    contextRef.current.drawImage(image, xOffset, yOffset, newWidth, newHeight);
-  }
+  const drawCanvas = (context, xOffset, yOffset, newWidth, newHeight) => {
+    context.drawImage(image, xOffset, yOffset, newWidth, newHeight);
+  };
 
   useEffect(() => {
     if (isConnected) {
-      const canvas = canvasRef.current;
-      canvas.width = 1000;
-      canvas.height = window.innerHeight;
-      const context = canvas.getContext("2d");
-      contextRef.current = context;
-      getCanvas();
+      const hallImage = new Image();
+      hallImage.src = "/hall.png";
+      hallImage.onload = () => {
+        setImage(hallImage);
+      };
     }
-  }, []);
+  }, [isConnected]);
+
+  useEffect(() => {
+    if (image && canvasRef) {
+      const canvas = canvasRef.current;
+      const c = canvas.getContext("2d");
+      var wrh = image.width / image.height;
+      var newWidth = canvas.width;
+      var newHeight = newWidth / wrh;
+      if (newHeight > canvas.height) {
+        newHeight = canvas.height;
+        newWidth = newHeight * wrh;
+      }
+      var xOffset = newWidth < canvas.width ? (canvas.width - newWidth) / 2 : 0;
+      var yOffset =
+        newHeight < canvas.height ? (canvas.height - newHeight) / 2 : 0;
+      drawCanvas(c, xOffset, yOffset, newWidth, newHeight);
+    }
+  }, [drawCanvas]);
+
   return (
     <motion.div
       id="hall-container"
@@ -52,7 +53,12 @@ const CityHall = ({ account, setAccount }) => {
     >
       {isConnected ? (
         <>
-          <canvas className="hall-canvas" ref={canvasRef} />
+          <canvas
+            className="hall-canvas"
+            ref={canvasRef}
+            width={1000}
+            height={window.innerHeight}
+          />
           <div id="hall-buttons" className="row justify-content-center">
             <div className="col-3">
               <button

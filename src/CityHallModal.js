@@ -134,7 +134,7 @@ const CityHallModal = ({
               {dailyShop.map((shop, index) => (
                 <div
                   id="item-card"
-                  className="card col-3 mx-2 text-center"
+                  className="card col-2 mx-2 text-center"
                   key={index}
                 >
                   <img src="" alt="..." />

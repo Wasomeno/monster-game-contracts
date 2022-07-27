@@ -1,15 +1,36 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import NotConnected from "./NotConnected";
 
 const Map = ({ account, setAccount }) => {
   const isConnected = Boolean(account[0]);
   const canvasRef = useRef(null);
-  const image = new Image();
-  image.src = "/Map (2).png";
+  const [image, setImage] = useState(null);
 
-  function getCanvas() {
+  const drawCanvas = (
+    canvas,
+    context,
+    xOffset,
+    yOffset,
+    newWidth,
+    newHeight
+  ) => {
+    context.drawImage(image, xOffset, yOffset, newWidth, newHeight);
+  };
+
+  useEffect(() => {
     if (isConnected) {
+      const mapImage = new Image();
+      mapImage.src = "/Map (2).png";
+      mapImage.onload = () => {
+        setImage(mapImage);
+      };
+    }
+  }, [isConnected]);
+
+  useEffect(() => {
+    if (image && canvasRef) {
       const canvas = canvasRef.current;
       canvas.width = 1280;
       canvas.height = window.innerHeight;
@@ -24,15 +45,9 @@ const Map = ({ account, setAccount }) => {
       var xOffset = newWidth < canvas.width ? (canvas.width - newWidth) / 2 : 0;
       var yOffset =
         newHeight < canvas.height ? (canvas.height - newHeight) / 2 : 0;
-
-      c.drawImage(image, xOffset, yOffset, newWidth, newHeight);
-      console.log(canvas);
+      drawCanvas(canvas, c, xOffset, yOffset, newWidth, newHeight);
     }
-  }
-
-  useEffect(() => {
-    getCanvas();
-  }, [isConnected]);
+  }, [drawCanvas]);
 
   return (
     <motion.div
@@ -57,7 +72,7 @@ const Map = ({ account, setAccount }) => {
                 duration: 1,
               }}
             >
-              <Link className="btn btn-primary" to={"/hall"}>
+              <Link id="map-button" className="btn btn-primary" to={"/hall"}>
                 City Hall
               </Link>
             </motion.div>
@@ -71,7 +86,7 @@ const Map = ({ account, setAccount }) => {
                 duration: 1,
               }}
             >
-              <Link className="btn btn-primary" to={"/dungeon"}>
+              <Link id="map-button" className="btn btn-primary" to={"/dungeon"}>
                 Dungeon
               </Link>
             </motion.div>
@@ -85,7 +100,7 @@ const Map = ({ account, setAccount }) => {
                 duration: 1,
               }}
             >
-              <Link className="btn btn-primary" to={"/nursery"}>
+              <Link id="map-button" className="btn btn-primary" to={"/nursery"}>
                 Nursery
               </Link>
             </motion.div>
@@ -99,18 +114,14 @@ const Map = ({ account, setAccount }) => {
                 duration: 1,
               }}
             >
-              <Link className="btn btn-primary" to={"/altar"}>
+              <Link id="map-button" className="btn btn-primary" to={"/altar"}>
                 Summoning Altar
               </Link>
             </motion.div>
           </div>
         </>
       ) : (
-        <>
-          <div className="d-flex justify-content-center align-items-center h-100">
-            <h2 className="p-2 text-white">Connect Your Wallet</h2>
-          </div>
-        </>
+        <NotConnected />
       )}
     </motion.div>
   );
