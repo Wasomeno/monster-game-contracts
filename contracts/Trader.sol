@@ -37,6 +37,8 @@ contract Trader is ERC1155Holder {
     mapping(uint256 => Trades) public traderTrades;
     mapping(address => ShopLimit[]) public shopDailyLimit;
     mapping(address => TradeLimit[]) public tradeDailyLimit;
+    mapping(address => uint256) public dailyShopTimeLimit;
+    mapping(address => uint256) public dailyTradeTimeLimit;
 
     constructor() {
         dailyShop.push(Shop(0, 3, (0.0001 * 1 ether)));
@@ -70,19 +72,32 @@ contract Trader is ERC1155Holder {
         uint256[] calldata _quantity,
         address _user
     ) external payable buyIfBelowLimit(_quantity) {
-        ShopLimit[] storage limitStr = shopDailyLimit[_user];
-        ShopLimit[] memory limitMem = shopDailyLimit[_user];
-        uint256 total = getTotalPrice(_user, _item, _quantity);
-        bool dailyLimit = limitMem.length == 0;
+        ShopLimit[] storage limit = shopDailyLimit[_user];
+        bool limitFullfilled = isLimitFullfilled(_item, _user);
+        uint256 total = getTotalPrice(_item, _quantity);
+        bool dailyLimit = limit.length == 0;
         uint256 arrLength = _quantity.length;
         if (dailyLimit) {
             for (uint256 i; i < arrLength; ++i) {
                 uint256 item = _item[i];
                 uint256 quantity = _quantity[i];
-                limitStr.push(ShopLimit(item, quantity));
+                limit.push(ShopLimit(item, quantity));
             }
+        } else if (limitFullfilled) {
+            dailyShopTimeLimit[_user] = block.timestamp;
         } else {
-            addUserDailyLimit(_user, _item, _quantity);
+            uint256 j;
+            for (uint256 i; i < arrLength; ++i) {
+                uint256 item = _item[i];
+                uint256 quantity = _quantity[i];
+                uint256 itemInLimit = limit[i].item;
+                if (item == itemInLimit) {
+                    uint256 newQuantity = limit[i].quantity + quantity;
+                    limit[i].quantity = newQuantity;
+                } else {
+                    limit.push(ShopLimit(item, quantity));
+                }
+            }
         }
         require(msg.value >= total, "Wrong value of ether sent");
         itemInterface.mintForShop(_user, _item, _quantity);
@@ -94,12 +109,17 @@ contract Trader is ERC1155Holder {
         address _user
     ) external {
         require(_quantity <= 5, "There's only 5 stocks per trade everyday");
-        tradeDailyLimit[_user].push(TradeLimit(_trade, 0));
         TradeLimit[] storage limit = tradeDailyLimit[_user];
         Trades memory trade = traderTrades[_trade];
         uint256 tradeQuantity = trade.quantityTrade * _quantity;
         uint256 receiveQuantity = trade.quantityReceived * _quantity;
-        require(limit[_trade].quantity <= 5, "You hit your limit");
+        bool dailyLimit = limit.length == 0;
+        if (dailyLimit) {
+            limit.push(TradeLimit(_trade, _quantity));
+        } else {
+            uint256 quantity = limit[_trade].quantity;
+            require(quantity <= 5, "You hit your limit");
+        }
         require(
             itemNftInterface.balanceOf(_user, trade.itemTrade) >
                 trade.quantityTrade,
@@ -141,11 +161,11 @@ contract Trader is ERC1155Holder {
         }
     }
 
-    function getTotalPrice(
-        address _user,
-        uint256[] memory _item,
-        uint256[] memory _quantity
-    ) internal view returns (uint256 total) {
+    function getTotalPrice(uint256[] memory _item, uint256[] memory _quantity)
+        internal
+        view
+        returns (uint256 total)
+    {
         uint256 arrLength = _item.length;
         uint256 totalTemp;
         for (uint256 i; i < arrLength; ++i) {
@@ -159,19 +179,25 @@ contract Trader is ERC1155Holder {
         total = totalTemp;
     }
 
-    function addUserDailyLimit(
-        address _user,
-        uint256[] memory _item,
-        uint256[] memory _quantity
-    ) internal {
-        uint256 arrLength = _item.length;
-        ShopLimit[] storage limitStr = shopDailyLimit[_user];
-        ShopLimit[] memory limitMem = shopDailyLimit[_user];
-        for (uint256 i; i < arrLength; ++i) {
-            uint256 index = getItemIndex(_item[i]);
-            uint256 quantity = limitMem[index].quantity;
-            require(_quantity[i] + quantity <= 3, "You hit your limit");
-            limitStr[index].quantity = quantity + _quantity[i];
+    function isLimitFullfilled(uint256[] calldata _item, address _user)
+        internal
+        view
+        returns (bool result)
+    {
+        uint256 shopLength = dailyShop.length;
+        uint256[] memory items = _item;
+        ShopLimit[] memory shopLimit = shopDailyLimit[_user];
+        if (shopLimit.length > 0) {
+            for (uint256 i; i < shopLength; ++i) {
+                uint256 limit = shopLimit[i].quantity;
+                if (limit < 3) {
+                    result = false;
+                } else {
+                    result = true;
+                }
+            }
+        } else {
+            result = false;
         }
     }
 

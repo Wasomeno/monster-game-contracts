@@ -77,59 +77,37 @@ async function main() {
   console.log("Monster 0 stats after mission : " + monster0After);
   console.log("");
 
-  const inventory0 = await monsterGame.playerInventory(user1.address, 0);
-  const inventory1 = await monsterGame.playerInventory(user1.address, 1);
+  const inventory0 = await items.getInventory(user1.getAddress());
 
-  console.log(
-    "User 1 inventory after dungeon: " +
-      "( " +
-      inventory0 +
-      " " +
-      inventory1 +
-      " )"
-  );
+  console.log("User 1 inventory after dungeon: ( " + inventory0 + " )");
 
-  console.log("");
-  console.log("=== Send Monster To Nursery ========");
+  // console.log("");
+  // console.log("=== Send Monster To Nursery ========");
 
-  console.log("Sending monster to nursery.....");
-  console.log("");
+  // console.log("Sending monster to nursery.....");
+  // console.log("");
 
-  await nursery.putOnNursery(0, user1.address, 3);
-  await nursery.goBackHome(0, user1.address);
+  // await nursery.putOnNursery(0, user1.address, 3);
+  // await nursery.goBackHome(0, user1.address);
 
-  const monsterAfterNursery = await monster.monsterStats(0);
+  // const monsterAfterNursery = await monster.monsterStats(0);
 
-  console.log("Monster 0 stats after nursery : " + monsterAfterNursery);
-  console.log("");
+  // console.log("Monster 0 stats after nursery : " + monsterAfterNursery);
+  // console.log("");
 
   console.log("=== Buy and Trade items on Trader ===========");
 
-  // await trader.buyItem(0, 2, user1.address, {
-  //   value: hre.ethers.utils.parseEther("0.0002"),
-  // });
+  await trader.buyItem([0, 1], [2, 2], user1.address, {
+    value: hre.ethers.utils.parseEther("0.0004"),
+  });
 
-  // const inventoryAfterBuy0 = await monsterGame.playerInventory(
-  //   user1.address,
-  //   0
-  // );
-  // const inventoryAfterBuy1 = await monsterGame.playerInventory(
-  //   user1.address,
-  //   1
-  // );
+  await items.connect(user1).setApprovalForAll(trader.address, true);
+  await trader.connect(user1).tradeItem(0, 1, user1.address);
+  const inventory = await items.getInventory(user1.getAddress());
 
-  // console.log("");
+  console.log("");
 
-  // console.log(
-  //   "User 1 inventory after buy: " +
-  //     "( " +
-  //     inventoryAfterBuy0 +
-  //     " " +
-  //     inventoryAfterBuy1 +
-  //     " )"
-  // );
-
-  console.log(await trader.getDailyLimit(0, user1.address));
+  console.log("User 1 inventory after buy: ( " + inventory + " )");
 }
 
 // We recommend this pattern to be able to use async/await everywhere

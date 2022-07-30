@@ -6,6 +6,7 @@ import CityHall from "./CityHall";
 import Altar from "./Altar";
 import Map from "./Map";
 import Navbar from "./Navbar";
+import UtilityNavigation from "./UtilityNavigation";
 import { AnimatePresence } from "framer-motion";
 
 const CityRoutes = ({ account, setAccount }) => {

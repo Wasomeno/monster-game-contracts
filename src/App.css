@@ -1,6 +1,7 @@
 *::-webkit-scrollbar {
   display: none;
 }
+
 .App {
   overflow: hidden;
   text-align: center;
@@ -23,6 +24,11 @@
   top: 0;
 }
 
+#map-button {
+  font-size: 22px;
+  font-family: Monogram;
+}
+
 .btn {
   box-shadow: 2px 2px 2px 0px black;
 }
@@ -31,9 +37,17 @@
   height: 10vh;
   width: 100vw;
   position: absolute;
-  z-index: 10;
+  z-index: 6;
   top: 0;
   color: white;
+}
+
+#navigation > .col-2:nth-child(1) {
+  z-index: 11;
+}
+
+#navigation > .col-2:nth-child(2) {
+  z-index: 11;
 }
 
 #connect-button {
@@ -93,6 +107,11 @@
   transform: translate(50%, -50%);
 }
 
+#altar-button {
+  font-size: 22px;
+  font-family: Monogram;
+}
+
 #dungeon-container {
   position: relative;
 }
@@ -107,9 +126,26 @@
 
 #dungeon-buttons > .col-3:nth-child(1) {
   position: absolute;
-  right: 48.5%;
+  right: 15.5%;
   bottom: 52%;
   transform: translate(50%, -50%);
+}
+
+#dungeon-buttons > .col-3:nth-child(2) {
+  position: absolute;
+  left: 0%;
+  bottom: 52%;
+  transform: translate(50%, -50%);
+}
+
+#dungeon-button {
+  font-size: 22px;
+  font-family: Monogram;
+}
+
+#missions-button {
+  font-size: 22px;
+  font-family: Monogram;
 }
 
 #hall-container {
@@ -138,21 +174,93 @@
   transform: translate(50%, -50%);
 }
 
+#nursery-container {
+  position: relative;
+}
+
+#nursery-buttons {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: 2;
+  top: 0;
+}
+
+#nursery-buttons > .col-3:nth-child(1) {
+  position: absolute;
+  left: 0%;
+  bottom: 52%;
+  transform: translate(50%, -50%);
+}
+
+#nursery-buttons > .col-3:nth-child(2) {
+  position: absolute;
+  right: 30.5%;
+  bottom: 52%;
+  transform: translate(50%, -50%);
+}
+
+#trader-button {
+  font-size: 22px;
+  font-family: Monogram;
+}
+
+#shop-button {
+  font-size: 22px;
+  font-family: Monogram;
+}
+
+#modal-title {
+  font-family: Monogram;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin: 10px;
+}
+
 #modal-screen {
   transition: 0.25s;
   position: absolute;
-  z-index: 1;
+  z-index: 5;
   top: 50%;
   right: 50%;
   transform: translate(50%, -50%);
 }
 
+#bag-container {
+  position: absolute;
+  bottom: 0%;
+  right: 0%;
+}
+
+#utility-navbar {
+  position: absolute;
+  z-index: 8;
+  bottom: 0;
+  margin: 10px;
+}
+
 #shop-modal {
+  background-image: url("../public/modal_GUI.png");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
   transition: 0.25s;
   position: absolute;
-  z-index: 2;
+  z-index: 5;
   top: 50%;
   right: 50%;
   transform: translate(50%, -50%);
   background-color: aliceblue;
+}
+
+#item-card {
+  background-image: url("../public/item_frame.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 102% 102%;
+}
+
+@font-face {
+  font-family: Monogram;
+  src: url("../public/monogram-extended.ttf");
 }
