@@ -11,14 +11,17 @@ contract MonsterGame is IERC721Receiver {
     IMonster public statsInterface;
     IItems public itemsInterface;
 
-    struct Monster {
+    struct Details {
         uint256 tokenId;
         uint256 missionStart;
         address owner;
     }
-
-    mapping(address => Monster[]) public myMonsterOnBeg;
-    mapping(address => Monster[]) public myMonsterOnInt;
+    mapping(address => uint256[]) public monstersOnBeginner;
+    mapping(address => uint256[]) public monstersOnIntermediate;
+    mapping(address => mapping(uint256 => Details))
+        public monstersOnBeginnerDetails;
+    mapping(address => mapping(uint256 => Details))
+        public monstersOnIntermediateDetails;
 
     uint256 nonce;
 
@@ -28,20 +31,44 @@ contract MonsterGame is IERC721Receiver {
         itemsInterface = IItems(itemNFT);
     }
 
-    function claimBeginnerMission(uint256 _tokenId, address _user) public {
-        Monster[] memory monster = myMonsterOnBeg[_user];
-        uint256 index = getMonsterIndexBeg(_tokenId, _user);
-        uint256 missionStart = monster[index].missionStart;
+    modifier isOnBeginner(address _user, uint256 _tokenId) {
+        bool result;
+        uint256[] memory monsters = monstersOnBeginner[_user];
+        for (uint256 i; i < monsters.length; ++i) {
+            uint256 monsterId = monsters[i];
+            if (_tokenId == monsterId) {
+                result = true;
+            }
+        }
+        require(result, "Monster not found");
+        _;
+    }
+
+    modifier isOnIntermediate(address _user, uint256 _tokenId) {
+        bool result;
+        uint256[] memory monsters = monstersOnIntermediate[_user];
+        for (uint256 i; i < monsters.length; ++i) {
+            uint256 monsterId = monsters[i];
+            if (_tokenId == monsterId) {
+                result = true;
+            }
+        }
+        require(result, "Monster not found");
+        _;
+    }
+
+    function claimBeginnerMission(uint256 _tokenId, address _user)
+        external
+        isOnBeginner(_user, _tokenId)
+    {
+        Details memory details = monstersOnBeginnerDetails[_user][_tokenId];
+        uint256 missionStart = details.missionStart;
         uint256 hunger = statsInterface.getMonsterHunger(_tokenId);
         uint256 newHunger = hunger - 10;
         uint256 expEarned = 4;
         require(
             missionStart + 15 minutes <= block.timestamp,
             "Duration not over yet"
-        );
-        require(
-            checkOnBeg(_tokenId, _user),
-            "Your monster is not on beginner mission"
         );
         statsInterface.setCooldown(_tokenId);
         statsInterface.setHunger(_tokenId, newHunger);
@@ -52,10 +79,12 @@ contract MonsterGame is IERC721Receiver {
         deleteMonsterOnBeg(_tokenId, _user);
     }
 
-    function claimIntermediateMission(uint256 _tokenId, address _user) public {
-        Monster[] memory monster = myMonsterOnInt[_user];
-        uint256 index = getMonsterIndexInt(_tokenId, _user);
-        uint256 missionStart = monster[index].missionStart;
+    function claimIntermediateMission(uint256 _tokenId, address _user)
+        external
+        isOnIntermediate(_user, _tokenId)
+    {
+        Details memory details = monstersOnIntermediateDetails[_user][_tokenId];
+        uint256 missionStart = details.missionStart;
         uint256 hunger = statsInterface.getMonsterHunger(_tokenId);
         uint256 newHunger = hunger - 10;
         uint256 expEarned = 8;
@@ -63,17 +92,13 @@ contract MonsterGame is IERC721Receiver {
             missionStart + 30 minutes <= block.timestamp,
             "Duration not over yet"
         );
-        require(
-            checkOnInt(_tokenId, _user),
-            "Your monster is not on intermediate mission"
-        );
         statsInterface.setCooldown(_tokenId);
         statsInterface.setHunger(_tokenId, newHunger);
         statsInterface.expUp(_tokenId, expEarned);
 
         itemsInterface.intermediateMissionReward(_user, randomNumber());
         statsInterface.setStatus(_tokenId, 0);
-        deleteMonsterOnInt(_tokenId);
+        deleteMonsterOnInt(_user, _tokenId);
     }
 
     function feedIfPassed(
@@ -128,7 +153,7 @@ contract MonsterGame is IERC721Receiver {
         statsInterface.feedMonster(_tokenId, _amount);
     }
 
-    function beginnerMission(uint256 _tokenId, address _user) public {
+    function beginnerMission(uint256 _tokenId, address _user) external {
         uint256 monsterHunger = statsInterface.getMonsterHunger(_tokenId);
         uint256 monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
         uint256 monsterStatus = statsInterface.getMonsterStatus(_tokenId);
@@ -140,10 +165,15 @@ contract MonsterGame is IERC721Receiver {
             startBeginnerIfPassed(monsterHunger, monsterCooldown, monsterStatus)
         );
         statsInterface.setStatus(_tokenId, 1);
-        myMonsterOnBeg[_user].push(Monster(_tokenId, block.timestamp, _user));
+        monstersOnBeginner[_user].push(_tokenId);
+        monstersOnBeginnerDetails[_user][_tokenId] = Details(
+            _tokenId,
+            block.timestamp,
+            _user
+        );
     }
 
-    function intermediateMission(uint256 _tokenId, address _user) public {
+    function intermediateMission(uint256 _tokenId, address _user) external {
         uint256 monsterLevel = statsInterface.getMonsterLevel(_tokenId);
         uint256 monsterHunger = statsInterface.getMonsterHunger(_tokenId);
         uint256 monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
@@ -161,114 +191,56 @@ contract MonsterGame is IERC721Receiver {
             )
         );
         statsInterface.setStatus(_tokenId, 1);
-        myMonsterOnInt[_user].push(Monster(_tokenId, block.timestamp, _user));
+        monstersOnIntermediate[_user].push(_tokenId);
+        monstersOnIntermediateDetails[_user][_tokenId] = Details(
+            _tokenId,
+            block.timestamp,
+            _user
+        );
     }
 
     function deleteMonsterOnBeg(uint256 _tokenId, address _user) internal {
-        uint256 index;
-        Monster[] storage myMonsterStr = myMonsterOnBeg[_user];
-        Monster[] memory myMonsterMem = myMonsterOnBeg[_user];
-        uint256 length = myMonsterMem.length;
-        for (uint256 i; i < length; ++i) {
-            if (myMonsterMem[i].tokenId == _tokenId) {
-                index = i;
-            }
-        }
-        myMonsterStr[index] = myMonsterMem[length - 1];
-        myMonsterStr.pop();
+        Details storage details = monstersOnBeginnerDetails[_user][_tokenId];
+        delete details.tokenId;
+        delete details.missionStart;
+        delete details.owner;
     }
 
-    function deleteMonsterOnInt(uint256 _tokenId) internal {
-        uint256 index;
-        Monster[] storage myMonsterStr = myMonsterOnInt[msg.sender];
-        Monster[] memory myMonsterMem = myMonsterOnInt[msg.sender];
-        uint256 length = myMonsterMem.length;
-        for (uint256 i; i < length; ++i) {
-            uint256 tokenId = myMonsterMem[i].tokenId;
-            if (tokenId == _tokenId) {
-                index = i;
-            }
-        }
-        myMonsterStr[index] = myMonsterMem[length - 1];
-        myMonsterStr.pop();
+    function deleteMonsterOnInt(address _user, uint256 _tokenId) internal {
+        Details storage details = monstersOnIntermediateDetails[_user][
+            _tokenId
+        ];
+        delete details.tokenId;
+        delete details.missionStart;
+        delete details.owner;
     }
 
-    function checkOnBeg(uint256 _tokenId, address _user)
-        internal
-        view
-        returns (bool result)
-    {
-        Monster[] memory myMonster = myMonsterOnBeg[_user];
-        uint256 length = myMonster.length;
-        for (uint256 i; i < length; ++i) {
-            uint256 tokenId = myMonster[i].tokenId;
-            if (tokenId == _tokenId) {
-                result = true;
-            }
-        }
-    }
-
-    function checkOnInt(uint256 _tokenId, address _user)
-        internal
-        view
-        returns (bool result)
-    {
-        Monster[] memory myMonster = myMonsterOnInt[_user];
-        uint256 length = myMonster.length;
-        for (uint256 i; i < length; ++i) {
-            uint256 tokenId = myMonster[i].tokenId;
-            if (tokenId == _tokenId) {
-                result = true;
-            }
-        }
-    }
-
-    function getMonsterIndexInt(uint256 _tokenId, address _user)
-        internal
-        view
-        returns (uint256 index)
-    {
-        Monster[] memory myMonster = myMonsterOnInt[_user];
-        uint256 length = myMonster.length;
-        for (uint256 i; i < length; ++i) {
-            uint256 tokenId = myMonster[i].tokenId;
-            if (tokenId == _tokenId) {
-                index = i;
-            }
-        }
-    }
-
-    function getMonsterIndexBeg(uint256 _tokenId, address _user)
-        internal
-        view
-        returns (uint256 index)
-    {
-        Monster[] memory myMonster = myMonsterOnBeg[_user];
-        uint256 length = myMonster.length;
-        for (uint256 i; i < length; ++i) {
-            uint256 tokenId = myMonster[i].tokenId;
-            if (tokenId == _tokenId) {
-                index = i;
-            }
-        }
-    }
-
-    function getMonstersOnBeg(address _user)
+    function getMonstersOnBeginner(address _user)
         external
         view
-        returns (Monster[] memory)
+        returns (Details[] memory)
     {
-        Monster[] memory monsters = myMonsterOnBeg[_user];
-        return monsters;
+        uint256[] memory monsters = monstersOnBeginner[_user];
+        Details[] memory myMonsters = new Details[](monsters.length);
+        for (uint256 i; i < monsters.length; ++i) {
+            uint256 monsterId = monsters[i];
+            myMonsters[i] = monstersOnBeginnerDetails[_user][monsterId];
+        }
+        return myMonsters;
     }
 
-    function getMonstersOnInt(address _user)
+    function getMonstersOnIntermediate(address _user)
         external
         view
-        returns (Monster[] memory)
+        returns (Details[] memory)
     {
-        Monster[] memory monsters = myMonsterOnInt[_user];
-        return monsters;
+        uint256[] memory monsters = monstersOnIntermediate[_user];
+        Details[] memory myMonsters = new Details[](monsters.length);
+        for (uint256 i; i < monsters.length; ++i) {
+            uint256 monsterId = monsters[i];
+            myMonsters[i] = monstersOnIntermediateDetails[_user][monsterId];
+        }
+        return myMonsters;
     }
 
     function randomNumber() internal returns (uint256 number) {
