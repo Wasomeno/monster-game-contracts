@@ -22,12 +22,25 @@ contract Nursery is ERC1155Receiver {
     IMonster monsterInterface;
     IERC1155 itemInterface;
 
-    mapping(address => Rest[]) public monsterOnNursery;
-    mapping(uint256 => Item) public nurseryShop;
+    mapping(address => uint256[]) public ownerToMonsters;
+    mapping(address => mapping(uint256 => Rest)) public monsterOnNursery;
 
     function setInterface(address _monsterNFT, address _itemNFT) public {
         monsterInterface = IMonster(_monsterNFT);
         itemInterface = IERC1155(_itemNFT);
+    }
+
+    modifier isOnNursery(address _user, uint256 _tokenId) {
+        bool result;
+        uint256[] memory monsters = ownerToMonsters[_user];
+        for (uint256 i; i < monsters.length; ++i) {
+            uint256 monster = monsters[i];
+            if (_tokenId == monster) {
+                result = true;
+            }
+            require(result, "Your monster is not here");
+        }
+        _;
     }
 
     function putOnNursery(
@@ -40,17 +53,24 @@ contract Nursery is ERC1155Receiver {
         require(status == 0, "Your monster still working on something");
         require(_duration * 10 + hunger <= 100, "Reduce the duration");
         require(msg.value >= _duration * 0.0001 ether, "Wrong value sent");
-        Rest[] storage rest = monsterOnNursery[_user];
-        rest.push(Rest(_tokenId, _user, _duration, block.timestamp));
+        monsterOnNursery[_user][_tokenId] = Rest(
+            _tokenId,
+            _user,
+            _duration,
+            block.timestamp
+        );
+        ownerToMonsters[_user].push(_tokenId);
         monsterInterface.setStatus(_tokenId, 2);
     }
 
-    function goBackHome(uint256 _tokenId, address _user) external {
-        Rest[] memory myMonster = monsterOnNursery[_user];
-        uint256 index = getMonsterIndex(_tokenId, _user);
-        uint256 startTime = myMonster[index].startTime;
+    function goBackHome(uint256 _tokenId, address _user)
+        external
+        isOnNursery(_user, _tokenId)
+    {
+        Rest memory monsterDetails = monsterOnNursery[_user][_tokenId];
+        uint256 startTime = monsterDetails.startTime;
         uint256 hunger = monsterInterface.getMonsterHunger(_tokenId);
-        uint256 duration = myMonster[index].duration;
+        uint256 duration = monsterDetails.duration;
         uint256 durationToHour = duration * 1 hours;
         uint256 newHunger = duration * 10;
         require(
@@ -62,57 +82,12 @@ contract Nursery is ERC1155Receiver {
         deleteMonster(_tokenId, _user);
     }
 
-    function buyItem(
-        uint256 _shopId,
-        uint256 _quantity,
-        address _user
-    ) public payable {
-        Item storage itemShop = nurseryShop[_shopId];
-        Item memory _itemShop = nurseryShop[_shopId];
-        require(_quantity <= 3, "There's only 3 stocks per item everyday");
-        require(_itemShop.quantity > 0, "No stock left");
-        require(
-            msg.value == _itemShop.price * _quantity,
-            "Wrong value of ether sent"
-        );
-        itemInterface.safeTransferFrom(
-            address(this),
-            _user,
-            _itemShop.item,
-            _quantity,
-            ""
-        );
-        itemShop.quantity = _itemShop.quantity - _quantity;
-    }
-
-    function getMonsterIndex(uint256 _tokenId, address _user)
-        public
-        view
-        returns (uint256 index)
-    {
-        Rest[] memory monsters = monsterOnNursery[_user];
-        uint256 length = monsters.length;
-        for (uint256 i; i < length; ++i) {
-            Rest memory monster = monsters[i];
-            if (monster.monster == _tokenId) {
-                index = i;
-            }
-        }
-    }
-
-    function deleteMonster(uint256 _tokenId, address _user) public {
-        uint256 index;
-        Rest[] storage myMonsterStr = monsterOnNursery[_user];
-        Rest[] memory myMonsterMem = monsterOnNursery[_user];
-        uint256 length = myMonsterMem.length;
-        for (uint256 i; i < length; ++i) {
-            uint256 monster = myMonsterMem[i].monster;
-            if (monster == _tokenId) {
-                index = i;
-            }
-        }
-        myMonsterStr[index] = myMonsterMem[length - 1];
-        myMonsterStr.pop();
+    function deleteMonster(uint256 _tokenId, address _user) internal {
+        Rest storage monsterDetails = monsterOnNursery[_user][_tokenId];
+        delete monsterDetails.monster;
+        delete monsterDetails.owner;
+        delete monsterDetails.duration;
+        delete monsterDetails.startTime;
     }
 
     function getMyMonsters(address _user)
@@ -120,7 +95,13 @@ contract Nursery is ERC1155Receiver {
         view
         returns (Rest[] memory monsters)
     {
-        monsters = monsterOnNursery[_user];
+        uint256[] memory myMonsters = ownerToMonsters[_user];
+        Rest[] memory details = new Rest[](myMonsters.length);
+        for (uint256 i; i < myMonsters.length; ++i) {
+            uint256 tokenId = myMonsters[i];
+            details[i] = monsterOnNursery[_user][tokenId];
+        }
+        monsters = details;
     }
 
     receive() external payable {}
