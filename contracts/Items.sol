@@ -7,12 +7,13 @@ import "./IMonsterGame.sol";
 contract Items is ERC1155 {
     IMonsterGame gameInterface;
 
-    uint256 public constant M_COINS = 0;
-    uint256 public constant BERRY = 1;
-    uint256 public constant HUNGER_POTION = 2;
-    uint256 public constant EXP_BOTTLE = 3;
-    uint256 public constant TOKEN_CRYSTAL = 4;
+    uint256 internal constant M_COINS = 0;
+    uint256 internal constant BERRY = 1;
+    uint256 internal constant HUNGER_POTION = 2;
+    uint256 internal constant EXP_BOTTLE = 3;
+    uint256 internal constant TOKEN_CRYSTAL = 4;
 
+    uint256[] internal items;
     mapping(uint256 => uint256[]) public itemRateSet;
     mapping(uint256 => uint256[]) public itemSet;
     mapping(uint256 => uint256[]) public bossRewardSet;
@@ -53,6 +54,12 @@ contract Items is ERC1155 {
         bossRateSet[0].push(2);
         bossRateSet[0].push(1);
         bossRateSet[0].push(10);
+    }
+
+    function addNewItems(uint256[] memory _items) public {
+        for (uint256 i; i < _items.length; ++i) {
+            items.push(_items[i]);
+        }
     }
 
     function mintForShop(
@@ -123,11 +130,40 @@ contract Items is ERC1155 {
         view
         returns (uint256[] memory inventory)
     {
-        uint256[] memory inventoryTemp = new uint256[](5);
-        for (uint256 i; i < 5; ++i) {
+        uint256 length = items.length;
+        uint256[] memory inventoryTemp = new uint256[](length);
+        for (uint256 i; i < items.length; ++i) {
             inventoryTemp[i] = (balanceOf(_user, i));
         }
 
         inventory = inventoryTemp;
+    }
+
+    function getItems() external view returns (uint256[] memory _items) {
+        _items = items;
+    }
+
+    function isItemExists(uint256 _itemId) internal view returns (bool result) {
+        uint256 length = items.length;
+        for (uint256 i; i < length; ++i) {
+            uint256 item = items[i];
+            if (_itemId == item) {
+                result = true;
+            }
+        }
+    }
+
+    function areItemsExists(uint256[] memory _itemId)
+        internal
+        view
+        returns (bool result)
+    {
+        uint256 length = items.length;
+        for (uint256 i; i < length; ++i) {
+            uint256 item = items[i];
+            if (_itemId[i] == item) {
+                result = true;
+            }
+        }
     }
 }
