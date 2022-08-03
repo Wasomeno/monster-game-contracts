@@ -286,5 +286,15 @@ contract Trader is ERC1155Holder {
         return shop;
     }
 
+    function getDailyTrades() external view returns (Trade[] memory) {
+        uint256 tradeLength = dailyTrades.length;
+        Trade[] memory trades = new Trade[](tradeLength);
+        for (uint256 i; i < tradeLength; ++i) {
+            uint256 tradeId = dailyTrades[i];
+            trades[i] = traderTrades[tradeId];
+        }
+        return trades;
+    }
+
     receive() external payable {}
 }
