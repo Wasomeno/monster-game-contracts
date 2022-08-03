@@ -16,6 +16,7 @@ contract MonsterGame is IERC721Receiver {
         uint256 missionStart;
         address owner;
     }
+
     mapping(address => uint256[]) public monstersOnBeginner;
     mapping(address => uint256[]) public monstersOnIntermediate;
     mapping(address => mapping(uint256 => Details))
@@ -200,19 +201,47 @@ contract MonsterGame is IERC721Receiver {
     }
 
     function deleteMonsterOnBeg(uint256 _tokenId, address _user) internal {
+        uint256 index;
+        uint256[] storage monsters = monstersOnBeginner[_user];
+        uint256 monstersLength = monsters.length;
         Details storage details = monstersOnBeginnerDetails[_user][_tokenId];
+
         delete details.tokenId;
         delete details.missionStart;
         delete details.owner;
+
+        for (uint256 i; i < monstersLength; ++i) {
+            uint256 monster = monsters[i];
+            if (monster == _tokenId) {
+                index = i;
+            }
+        }
+
+        monsters[index] = monsters[monstersLength - 1];
+        monsters.pop();
     }
 
     function deleteMonsterOnInt(address _user, uint256 _tokenId) internal {
+        uint256 index;
+        uint256[] storage monsters = monstersOnIntermediate[_user];
+        uint256 monstersLength = monsters.length;
         Details storage details = monstersOnIntermediateDetails[_user][
             _tokenId
         ];
+
         delete details.tokenId;
         delete details.missionStart;
         delete details.owner;
+
+        for (uint256 i; i < monstersLength; ++i) {
+            uint256 monster = monsters[i];
+            if (monster == _tokenId) {
+                index = i;
+            }
+        }
+
+        monsters[index] = monsters[monstersLength - 1];
+        monsters.pop();
     }
 
     function getMonstersOnBeginner(address _user)
