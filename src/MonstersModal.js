@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import MonsterABI from "../src/api/Monsters.json";
 import MonsterDetails from "./MonsterDetails";
 
-const MonsterContract = "0xBe145c9F694867BaC23Ec7e655A1A3AaE8047F35";
+const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
 
 const MonstersModal = ({ showMonsters, setShowMonsters }) => {
   const [monsters, setMonsters] = useState([]);
@@ -19,8 +19,15 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
     signer
   );
   async function getMonsters() {
-    await monsterContract.getMyMonster(signer.getAddress()).then((response) => {
-      setMonsters(response);
+    let myMonsters = [];
+    await monsterContract.getMyMonster(signer.getAddress()).then((monsters) => {
+      for (let i = 0; i < monsters.length; i++) {
+        monsterContract.getMonsterStatus(monsters[i]).then((response) => {
+          let stat = response;
+          myMonsters.push({ monster: monsters[i], status: stat });
+        });
+      }
+      setMonsters(myMonsters);
     });
   }
 
@@ -54,14 +61,25 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
       >
         {!showDetails ? (
           <div className="row justify-content-center p-3">
-            {monsters.map((monster, index) => (
+            {monsters.map((details, index) => (
               <div
                 className="card col-2 mx-1"
                 key={index}
-                onClick={() => monsterDetails(monster.toString())}
+                onClick={() => monsterDetails(details.monster.toString())}
               >
-                <div className="card-body">
-                  <h5 className="card-title">{monster.toString()}</h5>
+                <div className="card-body d-flex align-items-center justify-content-around">
+                  <h5 className="card-title">{details.monster.toString()}</h5>
+                  {details.status.toString() === "1" ? (
+                    <h5 className="py-2 px-3 bg-primary bg-opacity-25 rounded-circle text-center">
+                      On a Mission
+                    </h5>
+                  ) : details.status.toString() === "2" ? (
+                    <h5 className="py-2 px-3 bg-primary bg-opacity-25 rounded-circle text-center">
+                      On Nursery
+                    </h5>
+                  ) : (
+                    <></>
+                  )}
                 </div>
               </div>
             ))}
