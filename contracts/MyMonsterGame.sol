@@ -126,7 +126,10 @@ contract MonsterGame is IERC721Receiver {
         uint256 _monsterStatus
     ) internal pure returns (bool result) {
         require(_monsterStatus == 0, "Your monster still working on something");
-        require(_monsterCooldown == 0, " Your monster still on cooldown");
+        require(
+            _monsterCooldown <= block.timestamp,
+            " Your monster still on cooldown"
+        );
         require(_monsterHunger >= 5, "Not enough hunger");
         result = true;
     }
@@ -142,7 +145,10 @@ contract MonsterGame is IERC721Receiver {
             _monsterLevel > 2,
             "Your monster does'nt met the minimum requirement"
         );
-        require(_monsterCooldown == 0, " Your monster still on cooldown");
+        require(
+            _monsterCooldown <= block.timestamp,
+            " Your monster still on cooldown"
+        );
         require(_monsterHunger >= 10, "Not enough hunger");
         result = true;
     }

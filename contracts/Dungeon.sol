@@ -40,7 +40,10 @@ contract Dungeon {
         uint256 monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
 
         require(monsterStatus == 0, "Your monster still working on something");
-        require(monsterCooldown == 0, " Your monster still on cooldown");
+        require(
+            monsterCooldown <= block.timeStamp,
+            " Your monster still on cooldown"
+        );
         require(monsterHunger >= 20, "Not enough hunger");
 
         statsInterface.setStatus(_tokenId, 3);
