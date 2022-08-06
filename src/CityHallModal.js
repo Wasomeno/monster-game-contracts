@@ -2,10 +2,11 @@ import { motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import ReactDom from "react-dom";
 import TraderABI from "./api/Trader.json";
-import { BigNumber, ethers } from "ethers";
+import ItemsABI from "./api/Items.json";
+import { BigNumber, ethers, Signer } from "ethers";
 
-const TraderContract = "0x73A153E68F275e0a9Cf4c9A6c2e437300e4f768E";
-const MonsterGameContract = "0x0Adc18E217D04479a157aB26d6BE610edA4Ba820";
+const TraderContract = "0x3CCEc613890E907ACF32a8Eb4DbD18DB700C4b64";
+const ItemsContract = "0x633c04c362381BbD1C9B8762065318Cb4F207989";
 
 const CityHallModal = ({
   shopShow,
@@ -26,6 +27,12 @@ const CityHallModal = ({
     signer
   );
 
+  const itemsContract = new ethers.Contract(
+    ItemsContract,
+    ItemsABI.abi,
+    signer
+  );
+
   async function getShop() {
     await traderContract.getDailyShop().then((response) => {
       setDailyShop(response);
@@ -33,13 +40,9 @@ const CityHallModal = ({
   }
 
   async function getTrades() {
-    let result = [];
-    for (let i = 0; i < 3; i++) {
-      await traderContract.traderTrades(i).then((response) => {
-        result.push(response);
-      });
-    }
-    setTrades(result);
+    await traderContract.getDailyTrades().then((response) => {
+      setTrades(response);
+    });
   }
 
   const addToBag = (item, price, quantity) => {
@@ -55,6 +58,7 @@ const CityHallModal = ({
     for (let i = 0; i < bag.length; i++) {
       totalTemp += bag[i].price * bag[i].quantity;
     }
+    console.log(totalTemp.toString());
     return totalTemp.toString();
   }
 
@@ -65,27 +69,42 @@ const CityHallModal = ({
       items.push(bag[i].itemBigNumb);
     }
     await traderContract
-      .buyItem(items, quantity, signer.getAddress(), {
-        value: ethers.utils.parseEther(getTotal()),
+      .buyItems(items, quantity, signer.getAddress(), {
+        value: getTotal(),
       })
-      .then((response) => {
+      .then(() => {
         setBag([]);
         setQuantity([1, 1, 1]);
       });
   }
 
   async function tradeItem(index) {
-    const indexBig = BigNumber.from(index);
-    await traderContract
-      .tradeItem(indexBig, quantity[index], signer.getAddress())
-      .then((response) => {
-        console.log(response);
+    const isApproved = await itemsContract.isApprovedForAll(
+      signer.getAddress(),
+      TraderContract
+    );
+    if (isApproved) {
+      const indexBig = BigNumber.from(index);
+      await traderContract
+        .tradeItem(indexBig, quantity[index], signer.getAddress())
+        .then((response) => {
+          console.log(response);
+        });
+    } else {
+      const indexBig = BigNumber.from(index);
+      await itemsContract.setApprovalForAll(TraderContract, true).then(() => {
+        traderContract
+          .tradeItem(indexBig, quantity[index], signer.getAddress())
+          .then((response) => {
+            console.log(response);
+          });
       });
+    }
   }
 
-  const increment = (index) => {
+  const increment = (index, limit) => {
     let test = [...quantity];
-    if (test[index] >= 3) return;
+    if (test[index] >= limit) return;
     test[index] = test[index] + 1;
     setQuantity(test);
   };
@@ -119,7 +138,7 @@ const CityHallModal = ({
           />
           <motion.div
             id="shop-modal"
-            className="container w-75 h-75"
+            className="container h-75"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -141,7 +160,7 @@ const CityHallModal = ({
                   <div className="card-body">
                     <h5 className="card-title">
                       {shop.item.toString()} (
-                      {ethers.utils.formatEther(shop.price)}) Eth
+                      {ethers.utils.formatUnits(shop.price, "gwei")}) Eth
                     </h5>
                     <div className="d-flex">
                       <button
@@ -158,7 +177,7 @@ const CityHallModal = ({
                       />
                       <button
                         className="btn btn-success"
-                        onClick={() => increment(index)}
+                        onClick={() => increment(index, shop.quantity)}
                       >
                         +
                       </button>
@@ -168,7 +187,7 @@ const CityHallModal = ({
                       onClick={() =>
                         addToBag(
                           shop.item.toString(),
-                          ethers.utils.formatEther(shop.price),
+                          shop.price,
                           quantity[index]
                         )
                       }
@@ -202,7 +221,7 @@ const CityHallModal = ({
           />
           <motion.div
             id="shop-modal"
-            className="container w-75 h-75 p-4"
+            className="container h-75 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -217,22 +236,64 @@ const CityHallModal = ({
               <table className="table text-center">
                 <thead>
                   <tr>
-                    <th scope="col">Item (Received)</th>
-                    <th scope="col">Trade for</th>
-                    <th scope="col">Quantity</th>
-                    <th scopr="col">Action</th>
+                    <th scope="col" id="modal-title">
+                      Item (Received)
+                    </th>
+                    <th scope="col" id="modal-title">
+                      Trade for
+                    </th>
+                    <th scope="col" id="modal-title">
+                      Quantity
+                    </th>
+                    <th scopr="col" id="modal-title">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {trades.map((trade, index) => (
                     <tr key={index}>
                       <td>
-                        {trade.itemReceived.toString()} (
-                        {trade.quantityReceived.toString()})
+                        <img
+                          src={trade.itemReceived.toString() + ".png"}
+                          alt="items-img"
+                          width={"45px"}
+                        />
+                        <h5 id="modal-title">
+                          {trade.itemReceived.toString() === "0"
+                            ? "Gold Coins"
+                            : trade.itemReceived.toString() === "1"
+                            ? "Berry"
+                            : trade.itemReceived.toString() === "2"
+                            ? "Hunger Potion"
+                            : trade.itemReceived.toString() === "3"
+                            ? "Exp Potion"
+                            : trade.itemReceived.toString() === "4"
+                            ? "Token Crystal"
+                            : ""}{" "}
+                          x{trade.quantityReceived.toString()}
+                        </h5>
                       </td>
                       <td>
-                        {trade.itemTrade.toString()} (
-                        {trade.quantityTrade.toString()})
+                        <img
+                          src={trade.itemTrade.toString() + ".png"}
+                          alt="items-img"
+                          width={"45px"}
+                        />
+                        <h5 id="modal-title">
+                          {trade.itemTrade.toString() === "0"
+                            ? "Gold Coins"
+                            : trade.itemTrade.toString() === "1"
+                            ? "Berry"
+                            : trade.itemTrade.toString() === "2"
+                            ? "Hunger Potion"
+                            : trade.itemTrade.toString() === "3"
+                            ? "Exp Potion"
+                            : trade.itemTrade.toString() === "4"
+                            ? "Token Crystal"
+                            : ""}{" "}
+                          x{trade.quantityTrade.toString()}
+                        </h5>
                       </td>
                       <td className="d-flex justify-content-center">
                         <div className="d-flex w-25">
@@ -258,7 +319,9 @@ const CityHallModal = ({
                       </td>
                       <td>
                         <button
-                          className="btn btn-success"
+                          className="btn"
+                          id="modal-title"
+                          style={{ backgroundColor: "#A64B2A", color: "#fff" }}
                           onClick={() => tradeItem(index)}
                         >
                           Trade
