@@ -6,8 +6,8 @@ import MissionsModal from "./MissionsModal";
 import DungeonABI from "../src/api/Dungeon.json";
 import MonsterABI from "../src/api/Monsters.json";
 
-const DungeonContract = "0x3B8887D67BF775fF4D68C2b15266799e96CD8cC7";
-const MonsterContract = "0xBe145c9F694867BaC23Ec7e655A1A3AaE8047F35";
+const DungeonContract = "0x4f46037fEffa0433E013b77d131019b02042197A";
+const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
 
 const DungeonModal = ({
   showDungeon,
@@ -51,6 +51,7 @@ const DungeonModal = ({
       .then((response) => {
         setOnDungeon(response);
       });
+    console.log(onDungeon);
   }
 
   async function sendToBossFight(monster) {
@@ -150,11 +151,11 @@ const DungeonModal = ({
                         <img src="..." className="card-img-top" alt="..." />
                         <div className="card-body">
                           <h5 className="card-title text-center">
-                            {monster.toString()}
+                            {monster.tokenId.toString()}
                           </h5>
                           <button
                             className="btn btn-danger"
-                            onClick={() => claimBossFight(monster)}
+                            onClick={() => claimBossFight(monster.tokenId)}
                           >
                             Home
                           </button>

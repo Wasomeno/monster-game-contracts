@@ -3,9 +3,10 @@ import { motion } from "framer-motion";
 import { ethers } from "ethers";
 import MonsterGameABI from "../src/api/MonsterGame.json";
 import MonsterABI from "../src/api/Monsters.json";
+import MoonLoader from "react-spinners/MoonLoader";
 
-const MonsterGameContract = "0x6F02cf9223849358d81ff344DAb465a66Cd067d9";
-const MonsterContract = "0xBe145c9F694867BaC23Ec7e655A1A3AaE8047F35";
+const MonsterGameContract = "0x697049b6FcFDa75dE7bA4FBd9C364382c745BF8C";
+const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
 const MissionsModal = ({
   showBeginner,
   showInter,
@@ -14,6 +15,8 @@ const MissionsModal = ({
 }) => {
   const [onMission, setOnMission] = useState([]);
   const [monsters, setMonsters] = useState([]);
+  const [loadingMonster, setLoadingMonster] = useState(false);
+  const [loadingOnMission, setLoadingOnMission] = useState(false);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
@@ -29,23 +32,27 @@ const MissionsModal = ({
   );
 
   async function getMonstersOnMissions() {
+    setLoadingOnMission(true);
     if (!showInter) {
       await monsterGameContract
-        .getMonstersOnBeg(signer.getAddress())
+        .getMonstersOnBeginner(signer.getAddress())
         .then((response) => {
           setOnMission(response);
         });
+      setLoadingOnMission(false);
     } else {
       await monsterGameContract
-        .getMonstersOnInt(signer.getAddress())
+        .getMonstersOnIntermediate(signer.getAddress())
         .then((response) => {
           setOnMission(response);
         });
+      setLoadingOnMission(false);
     }
   }
 
   async function getMonsters() {
     let monstersTemp = [];
+    setLoadingMonster(true);
     const myMonsters = await monsterContract.getMyMonster(signer.getAddress());
     for (let i = 0; i < myMonsters.length; i++) {
       const status = await monsterContract.getMonsterStatus(myMonsters[i]);
@@ -54,7 +61,7 @@ const MissionsModal = ({
       }
     }
     setMonsters(monstersTemp);
-    console.log(monsters);
+    setLoadingMonster(false);
   }
 
   async function sendToBeginner(monster) {
@@ -110,12 +117,12 @@ const MissionsModal = ({
     <>
       {showBeginner ? (
         <>
-          <button
-            className="btn btn-danger"
+          <img
+            src="/back_icon.png"
             onClick={() => setShowBeginner(false)}
-          >
-            Back
-          </button>
+            width={"45px"}
+            alt="back-img"
+          />
           <motion.div
             className="container"
             initial={{ opacity: 0 }}
@@ -128,23 +135,39 @@ const MissionsModal = ({
                 Beginner Mission
               </h2>
             </div>
-            <div className="row justify-content-center">
+            <div className="row justify-content-center h-100">
               <div className="col">
                 <h4 id="modal-title" className="text-center">
                   Your Monsters
                 </h4>
-                <div className="row justify-content-center">
-                  {monsters.length < 1 ? (
-                    <h5 className="text-center" id="modal-text">
+                <div
+                  id="monsters-container"
+                  className="d-flex justify-content-center align-items-center flex-wrap mb-5"
+                >
+                  {loadingMonster ? (
+                    <MoonLoader
+                      loading={loadingMonster}
+                      size={50}
+                      color={"#8E3200"}
+                    />
+                  ) : monsters.length < 1 ? (
+                    <h5 className="text-center" id="modal-title">
                       No Monsters in Inventory
                     </h5>
                   ) : (
                     monsters.map((monster, index) => (
-                      <div className="card col-3 mx-1" key={index}>
-                        <img src="..." className="card-img-top" alt="..." />
-                        <div className="card-body">
-                          <h5 className="card-title">{monster.toString()}</h5>
+                      <div
+                        className="card col-4 m-1 d-flex justify-content-center align-items-center shadow-sm"
+                        key={index}
+                        style={{ backgroundColor: "#D8CCA3" }}
+                      >
+                        <img src="/monster.png" alt="..." width={"50%"} />
+                        <div className="card-body text-center py-1">
+                          <h5 className="card-title" id="modal-title">
+                            Monster #{monster.toString()}
+                          </h5>
                           <button
+                            id="modal-title"
                             className="btn btn-success"
                             onClick={() => sendToBeginner(monster)}
                           >
@@ -160,20 +183,38 @@ const MissionsModal = ({
                 <h4 id="modal-title" className="text-center">
                   Monster on Mission
                 </h4>
-                <div className="row justify-content-center">
-                  {onMission.length < 1 ? (
+                <div
+                  id="monsters-container"
+                  className="d-flex justify-content-center align-items-center flex-wrap"
+                >
+                  {loadingOnMission ? (
+                    <MoonLoader
+                      loading={loadingOnMission}
+                      size={50}
+                      color={"#8E3200"}
+                    />
+                  ) : onMission.length < 1 ? (
                     <h5 id="modal-title" className="text-center">
                       No Monsters on Mission
                     </h5>
                   ) : (
                     onMission.map((monster, index) => (
-                      <div className="card col-3 mx-1" key={index}>
-                        <img src="..." className="card-img-top" alt="..." />
-                        <div className="card-body">
-                          <h5 className="card-title">
-                            {monster.tokenId.toString()}
+                      <div
+                        className="card col-4 m-1 d-flex justify-content-center align-items-center"
+                        key={index}
+                        style={{ backgroundColor: "#D8CCA3" }}
+                      >
+                        <img
+                          src="/monster.png"
+                          width={"50%"}
+                          alt="monster-img"
+                        />
+                        <div className="card-body text-center py-1">
+                          <h5 className="card-title" id="modal-title">
+                            Monster #{monster.tokenId.toString()}
                           </h5>
                           <button
+                            id="modal-title"
                             className="btn btn-danger"
                             onClick={() => claimBeginner(monster.tokenId)}
                           >
@@ -190,13 +231,12 @@ const MissionsModal = ({
         </>
       ) : (
         <>
-          <button
-            className="btn btn-danger"
+          <img
+            src="/back_icon.png"
             onClick={() => setShowInter(false)}
-          >
-            {" "}
-            Back
-          </button>
+            width={"45px"}
+            alt="back-img"
+          />
           <motion.div
             className="container"
             initial={{ opacity: 0 }}
@@ -214,18 +254,34 @@ const MissionsModal = ({
                 <h4 id="modal-title" className="text-center">
                   Your Monster
                 </h4>
-                <div className="row justify-content-center">
-                  {monsters.length < 1 ? (
+                <div
+                  id="monsters-container"
+                  className="d-flex justify-content-center align-items-center flex-wrap"
+                >
+                  {loadingMonster ? (
+                    <MoonLoader
+                      size={50}
+                      loading={loadingMonster}
+                      color={"#8E3200"}
+                    />
+                  ) : monsters.length < 1 ? (
                     <h5 className="text-center" id="modal-title">
                       No Monsters in Inventory
                     </h5>
                   ) : (
                     monsters.map((monster, index) => (
-                      <div className="card col-3 mx-1" key={index}>
-                        <img src="..." className="card-img-top" alt="..." />
-                        <div className="card-body">
-                          <h5 className="card-title">{monster.toString()}</h5>
+                      <div
+                        className="card col-4 m-1 d-flex justify-content-center align-items-center"
+                        style={{ backgroundColor: "#D8CCA3" }}
+                        key={index}
+                      >
+                        <img src="/monster.png" width={"50%"} alt="..." />
+                        <div className="card-body text-center py-1">
+                          <h5 className="card-title" id="modal-title">
+                            Monster #{monster.toString()}
+                          </h5>
                           <button
+                            id="modal-title"
                             className="btn btn-success"
                             onClick={() => sendToIntermediate(monster)}
                           >
@@ -241,16 +297,30 @@ const MissionsModal = ({
                 <h4 id="modal-title" className="text-center">
                   Monster on Mission
                 </h4>
-                <div className="row justify-content-center">
-                  {onMission.length < 1 ? (
+                <div className="d-flex justify-content-center align-items-center flex-wrap">
+                  {loadingOnMission ? (
+                    <MoonLoader
+                      size={50}
+                      loading={loadingOnMission}
+                      color={"#8E3200"}
+                    />
+                  ) : onMission.length < 1 ? (
                     <h5 id="modal-title" className="text-center">
                       No Monsters on Mission
                     </h5>
                   ) : (
                     onMission.map((monster, index) => (
-                      <div className="card col-3 mx-1" key={index}>
-                        <img src="..." className="card-img-top" alt="..." />
-                        <div className="card-body">
+                      <div
+                        className="card col-4 m-1 d-flex justify-content-center align-items-center"
+                        key={index}
+                        style={{ backgroundColor: "#D8CCA3" }}
+                      >
+                        <img
+                          src="/monster.png"
+                          alt="monster-img"
+                          width={"50%"}
+                        />
+                        <div className="card-body py-1">
                           <h5 className="card-title">
                             {monster.tokenId.toString()}
                           </h5>

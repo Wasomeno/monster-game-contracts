@@ -60,30 +60,44 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
         transition={{ type: "tween", duration: 0.25 }}
       >
         {!showDetails ? (
-          <div className="row justify-content-center p-3">
-            {monsters.map((details, index) => (
-              <div
-                className="card col-2 mx-1"
-                key={index}
-                onClick={() => monsterDetails(details.monster.toString())}
-              >
-                <div className="card-body d-flex align-items-center justify-content-around">
-                  <h5 className="card-title">{details.monster.toString()}</h5>
-                  {details.status.toString() === "1" ? (
-                    <h5 className="py-2 px-3 bg-primary bg-opacity-25 rounded-circle text-center">
-                      On a Mission
+          <>
+            <div className="row justify-content-center align-items-center">
+              <h2 className="text-center p-3" id="modal-title">
+                My Monsters
+              </h2>
+            </div>
+            <div className="row justify-content-center p-3">
+              {monsters.map((details, index) => (
+                <div
+                  className="card col-2 mx-1 shadow-sm"
+                  key={index}
+                  onClick={() => monsterDetails(details.monster.toString())}
+                >
+                  <img
+                    src="/monster.png"
+                    className="card-img-top p-3"
+                    alt="monster-img"
+                  />
+                  <div className="card-body d-flex align-items-center justify-content-around">
+                    <h5 className="card-title" id="modal-title">
+                      Monster #{details.monster.toString()}
                     </h5>
-                  ) : details.status.toString() === "2" ? (
-                    <h5 className="py-2 px-3 bg-primary bg-opacity-25 rounded-circle text-center">
-                      On Nursery
-                    </h5>
-                  ) : (
-                    <></>
-                  )}
+                    {details.status.toString() === "1" ? (
+                      <h5 className="py-2 px-3 bg-primary bg-opacity-25 rounded-circle text-center">
+                        On a Mission
+                      </h5>
+                    ) : details.status.toString() === "2" ? (
+                      <h5 className="py-2 px-3 bg-primary bg-opacity-25 rounded-circle text-center">
+                        On Nursery
+                      </h5>
+                    ) : (
+                      <></>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         ) : (
           <MonsterDetails
             tokenId={tokenId}

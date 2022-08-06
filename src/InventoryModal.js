@@ -4,7 +4,7 @@ import ReactDom from "react-dom";
 import { motion } from "framer-motion";
 import ItemsABI from "../src/api/Items.json";
 
-const ItemsContract = "0x1c83A0119Fc52E6Ff5F9E1d1A6B39e54c422646f";
+const ItemsContract = "0x633c04c362381BbD1C9B8762065318Cb4F207989";
 
 function InventoryModal({ showInventory, setShowInventory }) {
   const [inventory, setInventory] = useState([]);
@@ -47,16 +47,51 @@ function InventoryModal({ showInventory, setShowInventory }) {
         exit={{ opacity: 0 }}
         transition={{ type: "tween", duration: 0.25 }}
       >
+        <div className="row justify-content-center align-items-center">
+          <h2 className="text-center p-3" id="modal-title">
+            Inventory
+          </h2>
+        </div>
         <div className="row justify-content-center p-3">
-          {inventory.map((item, index) => (
-            <div className="card col-2 mx-1">
-              <div className="card-body">
-                <h5 className="card-title" key={index}>
-                  {item.toString()}
-                </h5>
-              </div>
-            </div>
-          ))}
+          {inventory.map((item, index) =>
+            item.toString() === "0" ? (
+              <></>
+            ) : (
+              <>
+                <div
+                  className="card col-2 mx-1 d-flex flex-column justify-content-center align-items-center shadow-sm"
+                  key={index}
+                >
+                  <div className="align-self-end p-2">
+                    <h5 className="m-0" id="modal-title">
+                      x{item.toString()}
+                    </h5>
+                  </div>
+                  <img
+                    src={index + ".png"}
+                    alt="items-img"
+                    width={"40%"}
+                    className="p-2"
+                  />
+                  <div>
+                    <h5 className="card-title" id="modal-title">
+                      {index === 0
+                        ? "Gold Coins"
+                        : index === 1
+                        ? "Berry"
+                        : index === 2
+                        ? "Hunger Potion"
+                        : index === 3
+                        ? "Exp Potion"
+                        : index === 4
+                        ? "Token Crystal"
+                        : ""}{" "}
+                    </h5>
+                  </div>
+                </div>
+              </>
+            )
+          )}
         </div>
       </motion.div>
     </>,

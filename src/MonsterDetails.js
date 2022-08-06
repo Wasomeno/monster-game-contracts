@@ -56,13 +56,16 @@ const MonsterDetails = ({ tokenId, setShowDetails }) => {
           </h2>
         </div>
         <div className="d-flex justify-content-center">
-          <MoonLoader color="#000" loading={loading} size={50} />
+          <MoonLoader color="#8E3200" loading={loading} size={50} />
           {loading ? (
             <></>
           ) : (
             <>
               <div className="col">
-                <img alt="monster" />
+                <div className="d-flex flex-column align-items-center justify-content-center">
+                  <img alt="monster" src="/monster.png" width={"50%"} />
+                  <button className="btn btn-success col-4">Feed</button>
+                </div>
               </div>
               <div className="col-8">
                 <div className="container">
