@@ -4,9 +4,10 @@ import { BigNumber, ethers } from "ethers";
 import { motion } from "framer-motion";
 import MonsterABI from "../src/api/Monsters.json";
 import NurseryABI from "../src/api/Nursery.json";
+import MoonLoader from "react-spinners/MoonLoader";
 
-const NurseryContract = "0x8FBfc3e16BC171E58C52a8303c8DD5De869501B1";
-const MonsterContract = "0xBe145c9F694867BaC23Ec7e655A1A3AaE8047F35";
+const NurseryContract = "0xCe1641A6d54F67859AF935164E6Aa1F1Bd1a463A";
+const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
 
 const NurseryModal = ({
   showShop,
@@ -17,6 +18,8 @@ const NurseryModal = ({
   const [monsters, setMonsters] = useState([]);
   const [onNursery, setOnNursery] = useState([]);
   const [duration, setDuration] = useState([]);
+  const [loadingMonster, setLoadingMonster] = useState(false);
+  const [loadingOnNursery, setLoadingOnNursery] = useState(false);
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const monsterContract = new ethers.Contract(
@@ -30,18 +33,12 @@ const NurseryModal = ({
     signer
   );
 
-  async function buy() {
-    await buyItem();
-  }
-
   async function sendToNursery(monster, index) {
-    const price = ethers.utils.parseEther(
-      (0.0001 * duration[index]).toString()
-    );
+    const price = 100000 * duration[index];
     const durationBigInt = BigNumber.from(duration[index]);
     await nurseryContract
       .putOnNursery(monster, signer.getAddress(), durationBigInt, {
-        value: price,
+        value: ethers.utils.parseUnits(price.toString(), "gwei"),
       })
       .then((response) => {
         provider.waitForTransaction(response.hash).then(() => {
@@ -65,6 +62,7 @@ const NurseryModal = ({
   async function getMonsters() {
     let monstersTemp = [];
     let durations = [];
+    setLoadingMonster(true);
     const myMonsters = await monsterContract.getMyMonster(signer.getAddress());
     for (let i = 0; i < myMonsters.length; i++) {
       const status = await monsterContract.getMonsterStatus(myMonsters[i]);
@@ -75,19 +73,22 @@ const NurseryModal = ({
     }
     setDuration(durations);
     setMonsters(monstersTemp);
+    setLoadingMonster(false);
   }
 
   async function getOnNursery() {
+    setLoadingOnNursery(true);
     await nurseryContract
       .getMyMonsters(signer.getAddress())
       .then((response) => {
         setOnNursery(response);
       });
+    setLoadingOnNursery(false);
   }
 
   const increment = (index) => {
     let test = [...duration];
-    if (test[index] >= 3) return;
+    if (test[index] >= 5) return;
     test[index] = test[index] + 1;
     setDuration(test);
   };
@@ -136,18 +137,34 @@ const NurseryModal = ({
                 <h4 className="text-center" id="modal-title">
                   Your Monster
                 </h4>
-                <div className="row justify-content-center">
-                  {monsters.length < 1 ? (
+                <div
+                  id="monsters-container"
+                  className="d-flex justify-content-center flex-wrap"
+                >
+                  {loadingMonster ? (
+                    <MoonLoader size={50} loading={loadingMonster} />
+                  ) : monsters.length < 1 ? (
                     <h5 className="text-center" id="modal-title">
                       No monster on Inventory
                     </h5>
                   ) : (
                     monsters.map((monster, index) => (
-                      <div className="card col-4 mx-1 text-center" key={index}>
-                        <img src="..." className="card-img-top" alt="..." />
-                        <div className="card-body">
-                          <h5 className="card-title text-center">
-                            {monster.toString()}
+                      <div
+                        className="card col-4 m-1 text-center d-flex justify-content-center align-items-center"
+                        key={index}
+                        style={{ backgroundColor: "#D8CCA3" }}
+                      >
+                        <img
+                          src="/monster.png"
+                          width={"50%"}
+                          alt="monster-img"
+                        />
+                        <div className="card-body py-1 text-center">
+                          <h5
+                            className="card-title text-center"
+                            id="modal-title"
+                          >
+                            Monster #{monster.toString()}
                           </h5>
                           <div className="d-flex justify-content-center">
                             <button
@@ -171,6 +188,7 @@ const NurseryModal = ({
                           </div>
 
                           <button
+                            id="modal-title"
                             className="btn btn-success m-3"
                             onClick={() => sendToNursery(monster, index)}
                           >
@@ -186,20 +204,27 @@ const NurseryModal = ({
                 <h4 className="text-center" id="modal-title">
                   Monsters on Nursery
                 </h4>
-                <div className="row justify-content-center">
-                  {onNursery.length < 1 ? (
+                <div className="d-flex justify-content-center flex-wrap">
+                  {loadingOnNursery ? (
+                    <MoonLoader size={50} loading={loadingOnNursery} />
+                  ) : onNursery.length < 1 ? (
                     <h5 className="text-center" id="modal-title">
                       No Monsters on Nursery
                     </h5>
                   ) : (
                     onNursery.map((monster, index) => (
-                      <div className="card col-3" key={index}>
-                        <img src="..." className="card-img-top" alt="..." />
-                        <div className="card-body">
-                          <h5 className="card-title">
-                            {monster.monster.toString()}
+                      <div
+                        className="card col-4 d-flex justify-content-center align-items-center"
+                        key={index}
+                        style={{ backgroundColor: "#D8CCA3" }}
+                      >
+                        <img src="/monster.png" width={"50%"} alt="..." />
+                        <div className="card-body text-center py-1">
+                          <h5 className="card-title" id="modal-title">
+                            Monster #{monster.monster.toString()}
                           </h5>
                           <button
+                            id="modal-title"
                             className="btn btn-danger"
                             onClick={() => goBackHome(monster.monster)}
                           >
@@ -215,45 +240,7 @@ const NurseryModal = ({
           </motion.div>
         </>
       ) : (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ type: "tween", duration: 0.25 }}
-            id="modal-screen"
-            className="h-100 w-100 bg-dark bg-opacity-75"
-            onClick={() => setShowShop(false)}
-          />
-          <motion.div
-            id="shop-modal"
-            className="container w-75 h-75"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ type: "tween", duration: 0.25 }}
-          >
-            <div className="row justify-content-center">
-              <h2 className="text-center" id="modal-title">
-                Shop
-              </h2>
-            </div>
-            <div className="row justify-content-center">
-              <div className="card col-2">
-                <img src="..." className="card-img-top" alt="..." />
-                <div className="card-body">
-                  <h5 className="card-title">Shop Item</h5>
-                  <div className="d-flex">
-                    <button className="btn btn-danger">-</button>
-                    <input type="text" className="form-control mx-2" />
-                    <button className="btn btn-success">+</button>
-                  </div>
-                  <button className="btn btn-primary m-2">Buy</button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </>
+        <></>
       )}
     </>,
     document.getElementById("modal")
