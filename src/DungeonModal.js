@@ -5,6 +5,7 @@ import ReactDom from "react-dom";
 import MissionsModal from "./MissionsModal";
 import DungeonABI from "../src/api/Dungeon.json";
 import MonsterABI from "../src/api/Monsters.json";
+import MoonLoader from "react-spinners/MoonLoader";
 
 const DungeonContract = "0x4f46037fEffa0433E013b77d131019b02042197A";
 const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
@@ -19,6 +20,8 @@ const DungeonModal = ({
   const [showInter, setShowInter] = useState(false);
   const [monsters, setMonsters] = useState([]);
   const [onDungeon, setOnDungeon] = useState([]);
+  const [loadingMonster, setLoadingMonster] = useState(false);
+  const [loadingOnDungeon, setLoadingOnDungeon] = useState(false);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
@@ -35,6 +38,7 @@ const DungeonModal = ({
 
   async function getMonsters() {
     let monstersTemp = [];
+    setLoadingMonster(true);
     const myMonsters = await monsterContract.getMyMonster(signer.getAddress());
     for (let i = 0; i < myMonsters.length; i++) {
       const status = await monsterContract.getMonsterStatus(myMonsters[i]);
@@ -43,15 +47,18 @@ const DungeonModal = ({
       }
     }
     setMonsters(monstersTemp);
+    setLoadingMonster(false);
   }
 
   async function getMonstersOnDungeon() {
+    setLoadingOnDungeon(true);
     await dungeonContract
       .getMyMonsters(signer.getAddress())
       .then((response) => {
         setOnDungeon(response);
       });
     console.log(onDungeon);
+    setLoadingOnDungeon(false);
   }
 
   async function sendToBossFight(monster) {
@@ -111,49 +118,79 @@ const DungeonModal = ({
                 <h3 id="modal-title" className="text-center">
                   Your Monster
                 </h3>
-                <div className="row justify-content-center">
-                  {monsters.length < 1 ? (
-                    <h5 className="text-center" id="modal-title">
-                      No Monsters in Inventory
-                    </h5>
-                  ) : (
-                    monsters.map((monster, index) => (
-                      <div className="card col-3 mx-1" key={index}>
-                        <img src="..." className="card-img-top" alt="..." />
-                        <div className="d-flex flex-column justify-content-center">
-                          <h5 className="card-title text-center col">
-                            {monster.toString()}
-                          </h5>
-                          <button
-                            className="btn btn-success text-center col m-3"
-                            onClick={() => sendToBossFight(monster)}
+                <div
+                  id="monsters-container"
+                  className="d-flex flex-wrap justify-content-center"
+                >
+                  <div className="col" />
+                  <div className="col-10 d-flex flex-wrap justify-content-start">
+                    {loadingMonster ? (
+                      <MoonLoader size={50} loading={loadingMonster} />
+                    ) : monsters.length < 1 ? (
+                      <h5 className="text-center" id="modal-title">
+                        No Monsters in Inventory
+                      </h5>
+                    ) : (
+                      monsters.map((monster, index) => (
+                        <>
+                          <div
+                            className="card col-5 m-1 d-flex justify-content-center align-items-center"
+                            key={index}
+                            style={{ backgroundColor: "#D8CCA3" }}
                           >
-                            Send
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                            <img src="/monster.png" width={"50%"} alt="..." />
+                            <div className="card-body py-1 text-center">
+                              <h5 className="card-title" id="modal-title">
+                                Monster #{monster.toString()}
+                              </h5>
+                              <button
+                                id="modal-title"
+                                className="btn btn-success m-3"
+                                onClick={() => sendToBossFight(monster)}
+                              >
+                                Send
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      ))
+                    )}
+                  </div>
+                  <div className="col" />
                 </div>
               </div>
               <div className="col">
                 <h3 id="modal-title" className="text-center">
                   Monster on Dungeon
                 </h3>
-                <div className="row justify-content-center">
-                  {onDungeon.length < 1 ? (
+                <div className="d-flex flex-wrap justify-content-center">
+                  {loadingOnDungeon ? (
+                    <MoonLoader size={50} loading={loadingOnDungeon} />
+                  ) : onDungeon.length < 1 ? (
                     <h5 id="modal-title" className="text-center">
                       No Monster on Dungeon
                     </h5>
                   ) : (
                     onDungeon.map((monster, index) => (
-                      <div className="card col-3 mx-1" key={index}>
-                        <img src="..." className="card-img-top" alt="..." />
-                        <div className="card-body">
-                          <h5 className="card-title text-center">
-                            {monster.tokenId.toString()}
+                      <div
+                        className="card col-4 m-1 d-flex justify-content-center align-items-center"
+                        key={index}
+                        style={{ backgroundColor: "#D8CCA3" }}
+                      >
+                        <img
+                          src="/monster.png"
+                          width={"50%"}
+                          alt="monster-img"
+                        />
+                        <div className="card-body text-center py-1">
+                          <h5
+                            className="card-title text-center"
+                            id="modal-title"
+                          >
+                            Monster #{monster.tokenId.toString()}
                           </h5>
                           <button
+                            id="modal-title"
                             className="btn btn-danger"
                             onClick={() => claimBossFight(monster.tokenId)}
                           >
