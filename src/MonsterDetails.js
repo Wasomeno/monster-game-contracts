@@ -3,12 +3,14 @@ import { motion } from "framer-motion";
 import { BigNumber, ethers } from "ethers";
 import MonsterABI from "../src/api/Monsters.json";
 import MoonLoader from "react-spinners/MoonLoader";
+import FeedModal from "./FeedModal";
 
 const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
 
 const MonsterDetails = ({ tokenId, setShowDetails }) => {
   const [details, setDetails] = useState({});
   const [loading, setLoading] = useState(true);
+  const [showFeed, setShowFeed] = useState(false);
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const monsterContract = new ethers.Contract(
@@ -38,18 +40,18 @@ const MonsterDetails = ({ tokenId, setShowDetails }) => {
   return (
     <>
       <motion.div
-        className="container w-75 h-75"
+        className="container h-75"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ type: "tween", duration: 0.25 }}
       >
-        <button
-          className="btn btn-danger"
+        <img
+          src="/back_icon.png"
           onClick={() => setShowDetails(false)}
-        >
-          Back
-        </button>
+          alt="back_button"
+          width={"40px"}
+        />
         <div className="row justify-content-center">
           <h2 id="modal-title" className="text-center p-3">
             Monster #{tokenId}
@@ -64,7 +66,12 @@ const MonsterDetails = ({ tokenId, setShowDetails }) => {
               <div className="col">
                 <div className="d-flex flex-column align-items-center justify-content-center">
                   <img alt="monster" src="/monster.png" width={"50%"} />
-                  <button className="btn btn-success col-4">Feed</button>
+                  <button
+                    className="btn btn-success col-4"
+                    onClick={() => setShowFeed(true)}
+                  >
+                    Feed
+                  </button>
                 </div>
               </div>
               <div className="col-8">
@@ -197,6 +204,12 @@ const MonsterDetails = ({ tokenId, setShowDetails }) => {
           )}
         </div>
       </motion.div>
+      <FeedModal
+        setShowFeed={setShowFeed}
+        showFeed={showFeed}
+        tokenId={tokenId}
+        level={details.level}
+      />
     </>
   );
 };
