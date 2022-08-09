@@ -9,22 +9,27 @@ const UtilityNavigation = () => {
     <div id="utility-navbar" className="container-fluid p-3">
       <div className="row justify-content-center">
         <div className="col-2">
-          <button
-            className="btn btn-warning"
+          <img
+            src="bag_icon.png"
             onClick={() => setShowInventory(true)}
-          >
-            {" "}
+            width={"30%"}
+            alt="bag-icon"
+          />
+
+          <h5 className="m-0 p-2 text-white" id="modal-title">
             Inventory
-          </button>
+          </h5>
         </div>
         <div className="col-2">
-          <button
-            className="btn btn-warning"
+          <img
+            src="/bag_icon.png"
+            alt="bag-icon"
+            width={"30%"}
             onClick={() => setShowMonsters(true)}
-          >
-            {" "}
-            My Monsters
-          </button>
+          />
+          <h5 className="m-0 p-2 text-white" id="modal-title">
+            Monsters
+          </h5>
         </div>
       </div>
       <InventoryModal
