@@ -3,9 +3,11 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "./IMonsterGame.sol";
+import "./IMonster.sol";
 
 contract Items is ERC1155 {
     IMonsterGame gameInterface;
+    IMonster monsterInterface;
 
     uint256 internal constant M_COINS = 0;
     uint256 internal constant BERRY = 1;
@@ -19,9 +21,7 @@ contract Items is ERC1155 {
     mapping(uint256 => uint256[]) public bossRewardSet;
     mapping(uint256 => uint256[]) public bossRateSet;
 
-    constructor(address monsterGame) ERC1155("") {
-        gameInterface = IMonsterGame(monsterGame);
-
+    constructor() ERC1155("") {
         itemSet[0].push(0);
         itemSet[0].push(1);
         itemRateSet[0].push(3);
@@ -54,6 +54,11 @@ contract Items is ERC1155 {
         bossRateSet[0].push(2);
         bossRateSet[0].push(1);
         bossRateSet[0].push(10);
+    }
+
+    function setInterface(address _monsterGame, address _monsterNFT) external {
+        gameInterface = IMonsterGame(_monsterGame);
+        monsterInterface = IMonster(_monsterNFT);
     }
 
     function addNewItems(uint256[] memory _items) public {
@@ -125,6 +130,33 @@ contract Items is ERC1155 {
         }
     }
 
+    function useHungerPotion(
+        address _user,
+        uint256 _tokenId,
+        uint256 _amount
+    ) external {
+        uint256 balance = balanceOf(_user, HUNGER_POTION);
+        uint256 hunger = monsterInterface.getMonsterHunger(_tokenId);
+        uint256 newHunger = hunger + 5;
+        require(balance > _amount, "Not enough items");
+        require(newHunger <= 100, "Too much hunger");
+        safeTransferFrom(_user, address(this), HUNGER_POTION, _amount, "");
+        monsterInterface.setHunger(_tokenId, newHunger);
+    }
+
+    function useExpBottle(
+        address _user,
+        uint256 _tokenId,
+        uint256 _amount
+    ) external {
+        uint256 balance = balanceOf(_user, EXP_BOTTLE);
+        uint256 exp = monsterInterface.getMonsterExp(_tokenId);
+        uint256 newExp = exp + 1;
+        require(balance >= _amount, "Not enough items");
+        safeTransferFrom(_user, address(this), EXP_BOTTLE, _amount, "");
+        monsterInterface.expUp(_tokenId, 1);
+    }
+
     function getInventory(address _user)
         external
         view
@@ -133,7 +165,10 @@ contract Items is ERC1155 {
         uint256 length = items.length;
         uint256[] memory inventoryTemp = new uint256[](length);
         for (uint256 i; i < items.length; ++i) {
-            inventoryTemp[i] = (balanceOf(_user, i));
+            uint256 balance = balanceOf(_user, i);
+            if (balance > 0) {
+                inventoryTemp[i] = (balanceOf(_user, i));
+            }
         }
 
         inventory = inventoryTemp;
