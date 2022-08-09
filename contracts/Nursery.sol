@@ -83,8 +83,9 @@ contract Nursery is ERC1155Receiver {
     }
 
     function deleteMonster(uint256 _tokenId, address _user) internal {
+        uint256 index;
         Rest storage monsterDetails = monsterOnNursery[_user][_tokenId];
-        uint256[] memory monsters = ownerToMonsters[_user];
+        uint256[] storage monsters = ownerToMonsters[_user];
         uint256 monstersLength = monsters.length;
         delete monsterDetails.monster;
         delete monsterDetails.owner;

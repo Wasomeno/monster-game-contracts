@@ -124,7 +124,7 @@ contract MonsterGame is IERC721Receiver {
         uint256 _monsterHunger,
         uint256 _monsterCooldown,
         uint256 _monsterStatus
-    ) internal pure returns (bool result) {
+    ) internal view returns (bool result) {
         require(_monsterStatus == 0, "Your monster still working on something");
         require(
             _monsterCooldown <= block.timestamp,
@@ -139,7 +139,7 @@ contract MonsterGame is IERC721Receiver {
         uint256 _monsterCooldown,
         uint256 _monsterStatus,
         uint256 _monsterLevel
-    ) internal pure returns (bool result) {
+    ) internal view returns (bool result) {
         require(_monsterStatus == 0, "Your monster still working on something");
         require(
             _monsterLevel > 2,

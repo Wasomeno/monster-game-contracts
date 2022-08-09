@@ -41,7 +41,7 @@ contract Dungeon {
 
         require(monsterStatus == 0, "Your monster still working on something");
         require(
-            monsterCooldown <= block.timeStamp,
+            monsterCooldown <= block.timestamp,
             " Your monster still on cooldown"
         );
         require(monsterHunger >= 20, "Not enough hunger");
