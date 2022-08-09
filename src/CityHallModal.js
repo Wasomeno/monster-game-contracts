@@ -153,14 +153,29 @@ const CityHallModal = ({
               {dailyShop.map((shop, index) => (
                 <div
                   id="item-card"
-                  className="card col-2 mx-2 text-center"
+                  className="card col-2 d-flex flex-column justify-content-center align-items-center m-2 text-center"
                   key={index}
                 >
-                  <img src="" alt="..." />
-                  <div className="card-body">
-                    <h5 className="card-title">
-                      {shop.item.toString()} (
-                      {ethers.utils.formatUnits(shop.price, "gwei")}) Eth
+                  <img
+                    src={shop.item.toString() + ".png"}
+                    width={"30%"}
+                    className="p-2"
+                    alt="shop-item-img"
+                  />
+                  <div className="card-body p-1">
+                    <h5 className="card-title m-1" id="modal-title">
+                      {shop.item.toString() === "0"
+                        ? "Gold Coins"
+                        : shop.item.toString() === "1"
+                        ? "Berry"
+                        : shop.item.toString() === "2"
+                        ? "Hunger Potion"
+                        : shop.item.toString() === "3"
+                        ? "Exp Potion"
+                        : shop.item.toString() === "4"
+                        ? "Token Crystal"
+                        : ""}{" "}
+                      ({ethers.utils.formatUnits(shop.price, "gwei")}) Eth
                     </h5>
                     <div className="d-flex">
                       <button
@@ -171,7 +186,7 @@ const CityHallModal = ({
                       </button>
                       <input
                         type="text"
-                        className="form-control text-center"
+                        className="form-control text-center mx-1"
                         value={quantity[index]}
                         name={index}
                       />
@@ -200,11 +215,19 @@ const CityHallModal = ({
             </div>
             <div
               id="bag-container"
-              className="col-3 d-flex justify-content-center p-3"
+              className="d-flex col-2 justify-content-center p-3 flex-wrap"
             >
-              <button className="btn btn-success" onClick={buy}>
-                Bag ({bag.length})
-              </button>
+              <div className="col-2 text-center">
+                <h5 id="modal-title" className="m-0 bg-danger rounded-circle">
+                  {bag.length}
+                </h5>
+                <img
+                  src="/bag_icon.png"
+                  width={"60px"}
+                  onClick={buy}
+                  alt="basket-icon"
+                />
+              </div>
             </div>
           </motion.div>
         </>
