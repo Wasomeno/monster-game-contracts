@@ -59,31 +59,23 @@ const CityHall = ({ account, setAccount }) => {
             width={1000}
             height={window.innerHeight}
           />
-          <div id="hall-buttons" className="row justify-content-center">
-            <div className="col-3">
-              <button
-                id="trader-button"
-                type="button"
-                className="btn btn-primary"
-                data-toggle="modal"
-                data-target="#exampleModal"
-                onClick={() => setTraderShow(true)}
-              >
-                Trader
-              </button>
-            </div>
-            <div className="col-3">
-              <button
-                id="shop-button"
-                type="button"
-                className="btn btn-primary"
-                data-toggle="modal"
-                data-target="#exampleModal"
-                onClick={() => setShopShow(true)}
-              >
-                Shop
-              </button>
-            </div>
+          <div className="col-3">
+            <button
+              id="trader-button"
+              className="btn btn-primary"
+              onClick={() => setTraderShow(true)}
+            >
+              Trader
+            </button>
+          </div>
+          <div className="col-3">
+            <button
+              id="shop-button"
+              className="btn btn-primary"
+              onClick={() => setShopShow(true)}
+            >
+              Shop
+            </button>
           </div>
           <CityHallModal
             shopShow={shopShow}
