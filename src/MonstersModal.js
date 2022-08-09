@@ -4,6 +4,7 @@ import { ethers } from "ethers";
 import { motion } from "framer-motion";
 import MonsterABI from "../src/api/Monsters.json";
 import MonsterDetails from "./MonsterDetails";
+import MoonLoader from "react-spinners/MoonLoader";
 
 const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
 
@@ -11,6 +12,7 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
   const [monsters, setMonsters] = useState([]);
   const [showDetails, setShowDetails] = useState(false);
   const [tokenId, setTokenId] = useState("");
+  const [loading, setLoading] = useState(false);
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const monsterContract = new ethers.Contract(
@@ -20,6 +22,7 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
   );
   async function getMonsters() {
     let myMonsters = [];
+    setLoading(true);
     await monsterContract.getMyMonster(signer.getAddress()).then((monsters) => {
       for (let i = 0; i < monsters.length; i++) {
         monsterContract.getMonsterStatus(monsters[i]).then((response) => {
@@ -29,6 +32,7 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
       }
       setMonsters(myMonsters);
     });
+    setLoading(false);
   }
 
   function monsterDetails(tokenId) {
@@ -66,36 +70,54 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
                 My Monsters
               </h2>
             </div>
-            <div className="row justify-content-center p-3">
-              {monsters.map((details, index) => (
-                <div
-                  className="card col-2 mx-1 shadow-sm"
-                  key={index}
-                  onClick={() => monsterDetails(details.monster.toString())}
-                >
-                  <img
-                    src="/monster.png"
-                    className="card-img-top p-3"
-                    alt="monster-img"
-                  />
-                  <div className="card-body d-flex align-items-center justify-content-around">
-                    <h5 className="card-title" id="modal-title">
-                      Monster #{details.monster.toString()}
-                    </h5>
+            <div className="d-flex justify-content-center flex-wrap p-3">
+              {loading ? (
+                <MoonLoader size={50} loading={loading} />
+              ) : monsters < 1 ? (
+                <h5 className="m-0" id="modal-title">
+                  You don't have a monster
+                </h5>
+              ) : (
+                monsters.map((details, index) => (
+                  <div
+                    className="card col-2 mx-1 p-3 shadow-sm d-flex justify-content-center align-items-center"
+                    key={index}
+                    onClick={() => monsterDetails(details.monster.toString())}
+                  >
                     {details.status.toString() === "1" ? (
-                      <h5 className="py-2 px-3 bg-primary bg-opacity-25 rounded-circle text-center">
-                        On a Mission
-                      </h5>
+                      <img
+                        src="sword_icon.png"
+                        width={"25%"}
+                        alt="activity-icon"
+                        className="align-self-end p-1 my-1 bg-primary bg-opacity-25 rounded-circle"
+                      />
                     ) : details.status.toString() === "2" ? (
-                      <h5 className="py-2 px-3 bg-primary bg-opacity-25 rounded-circle text-center">
-                        On Nursery
-                      </h5>
+                      <img
+                        src="love_icon.png"
+                        width={"25%"}
+                        alt="activity-icon"
+                        className="align-self-end"
+                      />
+                    ) : details.status.toString() === "3" ? (
+                      <img
+                        src="chest_icon.png"
+                        width={"25%"}
+                        alt="activity-icon"
+                        className="align-self-end"
+                      />
                     ) : (
                       <></>
                     )}
+
+                    <img src="/monster.png" alt="monster-img" width={"75%"} />
+                    <div className="card-body text-center p-0">
+                      <h5 className="card-title" id="modal-title">
+                        Monster #{details.monster.toString()}
+                      </h5>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </>
         ) : (
