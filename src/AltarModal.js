@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ethers } from "ethers";
 import MonsterABI from "../src/api/Monsters.json";
 
-const MonsterContract = "0xBe145c9F694867BaC23Ec7e655A1A3AaE8047F35";
+const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
 
 const AltarModal = ({ showAltar, setShowAltar }) => {
   const [quantity, setQuantity] = useState(1);
@@ -55,7 +55,9 @@ const AltarModal = ({ showAltar, setShowAltar }) => {
         transition={{ type: "tween", duration: 0.5 }}
       >
         <div className="row justify-content-center">
-          <h2 id="modal-title">Monster Altar</h2>
+          <h2 id="modal-title" className="text-center p-3">
+            Summoning Altar
+          </h2>
         </div>
         <div className="d-flex justify-content-center m-2">
           <button className="btn btn-danger" onClick={() => decrement()}>
@@ -73,11 +75,9 @@ const AltarModal = ({ showAltar, setShowAltar }) => {
           </button>
         </div>
         <div className="row justify-content-center">
-          <div>
-            <button className="btn btn-warning m-2" onClick={summonMonster}>
-              Summon
-            </button>
-          </div>
+          <button className="btn btn-warning m-2 w-25" onClick={summonMonster}>
+            Summon
+          </button>
         </div>
       </motion.div>
     </>,
