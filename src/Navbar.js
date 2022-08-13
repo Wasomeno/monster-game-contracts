@@ -1,12 +1,35 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { ethers } from "ethers";
 import { Link, Outlet } from "react-router-dom";
 import InventoryModal from "./InventoryModal";
 import MonstersModal from "./MonstersModal";
+import ItemsABI from "./api/Items.json";
+
+const ItemsContract = "0x633c04c362381BbD1C9B8762065318Cb4F207989";
 
 const Navbar = ({ account, setAccount }) => {
   const isConnected = Boolean(account[0]);
   const [showInventory, setShowInventory] = useState(false);
   const [showMonsters, setShowMonsters] = useState(false);
+  const [gold, setGold] = useState(0);
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  const signer = provider.getSigner();
+  const itemsContract = new ethers.Contract(
+    ItemsContract,
+    ItemsABI.abi,
+    signer
+  );
+
+  async function getGold() {
+    await itemsContract.balanceOf(signer.getAddress(), 0).then((response) => {
+      setGold(response.toString());
+    });
+  }
+
+  useEffect(() => {
+    getGold();
+  }, []);
+
   return (
     <>
       {!isConnected ? null : (
@@ -29,7 +52,7 @@ const Navbar = ({ account, setAccount }) => {
             }}
           />
           <h6 id="modal-title" className="p-1 w-100">
-            Gold: 500
+            Gold: {gold}
           </h6>
           <div id="user-menu">
             <h5
