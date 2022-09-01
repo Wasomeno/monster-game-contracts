@@ -17,7 +17,8 @@ const CityHallModal = ({
   const [bag, setBag] = useState([]);
   const [dailyShop, setDailyShop] = useState([]);
   const [trades, setTrades] = useState([]);
-  const [quantity, setQuantity] = useState([1, 1, 1]);
+  const [quantity, setQuantity] = useState([]);
+  const [activeItem, setActiveItem] = useState(0);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
@@ -34,8 +35,15 @@ const CityHallModal = ({
   );
 
   async function getShop() {
+    let quantities = [];
     await traderContract.getDailyShop().then((response) => {
       setDailyShop(response);
+      console.log(response);
+      for (let i = 0; i < response.length; ++i) {
+        quantities.push(1);
+      }
+      setQuantity(quantities);
+      console.log(quantity);
     });
   }
 
@@ -119,7 +127,7 @@ const CityHallModal = ({
   useEffect(() => {
     getShop();
     getTrades();
-  }, [quantity]);
+  }, []);
 
   if (!shopShow && !traderShow) return;
 
@@ -144,66 +152,119 @@ const CityHallModal = ({
             exit={{ opacity: 0 }}
             transition={{ type: "tween", duration: 0.25 }}
           >
-            <div className="row justify-content-center">
-              <h2 id="modal-title" className="text-center">
-                Shop
-              </h2>
-            </div>
-            <div className="row justify-content-center">
-              {dailyShop.map((shop, index) => (
-                <div
-                  id="item-card"
-                  className="card col-2 d-flex flex-column justify-content-center align-items-center m-2 text-center"
-                  key={index}
-                >
-                  <img
-                    src={shop.item.toString() + ".png"}
-                    width={"30%"}
-                    className="p-2"
-                    alt="shop-item-img"
-                  />
-                  <div className="card-body p-1">
-                    <h5 className="card-title m-1" id="modal-title">
-                      {shop.item.toString() === "0"
+            <img
+              src="/back_icon.png"
+              onClick={() => setShopShow(false)}
+              width={"45px"}
+              alt="back-img"
+            />
+            <div className="row justify-content-center align-items-start">
+              <div className="col-8 d-flex flex-column justify-content-center align-items-center">
+                <h2 id="modal-title" className="text-center">
+                  Shop
+                </h2>
+                <div className="d-flex justify-content-center align-items-center flex-wrap w-100">
+                  {dailyShop.map((shop, index) => (
+                    <div
+                      id={
+                        activeItem === index ? "item-card-active" : "item-card"
+                      }
+                      className="card col-3 d-flex flex-column justify-content-center align-items-center m-2 text-center"
+                      key={index}
+                      style={{ height: "10rem" }}
+                      onClick={() => setActiveItem(index)}
+                    >
+                      <img
+                        src={shop.item.toString() + ".png"}
+                        width={"50px"}
+                        className="p-1"
+                        alt="shop-item-img"
+                      />
+                      <div className="p-1">
+                        <h5 className="card-title m-1" id="modal-title">
+                          {shop.item.toString() === "0"
+                            ? "Gold Coins"
+                            : shop.item.toString() === "1"
+                            ? "Berry"
+                            : shop.item.toString() === "2"
+                            ? "Hunger Potion"
+                            : shop.item.toString() === "3"
+                            ? "Exp Potion"
+                            : shop.item.toString() === "4"
+                            ? "Token Crystal"
+                            : ""}{" "}
+                        </h5>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="col-4 p-3">
+                <div className="border border-2 border-dark p-3 rounded">
+                  <h4 id="modal-title" className="text-center">
+                    Item Details
+                  </h4>
+                  <div className="d-flex flex-column justify-content-center align-items-center">
+                    <h5>
+                      {dailyShop[activeItem].item.toString() === "0"
                         ? "Gold Coins"
-                        : shop.item.toString() === "1"
+                        : dailyShop[activeItem].item.toString() === "1"
                         ? "Berry"
-                        : shop.item.toString() === "2"
+                        : dailyShop[activeItem].item.toString() === "2"
                         ? "Hunger Potion"
-                        : shop.item.toString() === "3"
+                        : dailyShop[activeItem].item.toString() === "3"
                         ? "Exp Potion"
-                        : shop.item.toString() === "4"
+                        : dailyShop[activeItem].item.toString() === "4"
                         ? "Token Crystal"
                         : ""}{" "}
-                      ({ethers.utils.formatUnits(shop.price, "gwei")}) Eth
                     </h5>
-                    <div className="d-flex">
-                      <button
-                        className="btn btn-danger"
-                        onClick={() => decrement(index)}
-                      >
-                        -
-                      </button>
-                      <input
-                        type="text"
-                        className="form-control text-center mx-1"
-                        value={quantity[index]}
-                        name={index}
-                      />
-                      <button
-                        className="btn btn-success"
-                        onClick={() => increment(index, shop.quantity)}
-                      >
-                        +
-                      </button>
+                    <img
+                      src={dailyShop[activeItem].item.toString() + ".png"}
+                      width={"80px"}
+                      className="p-3 m-3 border border-dark border-1 rounded"
+                      alt="shop-item-img"
+                      style={{ backgroundColor: "whitesmoke" }}
+                    />
+                    <div className="d-flex justify-content-around align-items-center">
+                      <div className="col-4 d-flex justify-content-center align-items-center">
+                        <button
+                          className="btn btn-danger text-center"
+                          onClick={() => decrement(activeItem)}
+                        >
+                          -
+                        </button>
+                        <h5 className="mx-1 p-2">{quantity[activeItem]}</h5>
+                        <button
+                          className="btn btn-success text-center"
+                          onClick={() =>
+                            increment(
+                              activeItem,
+                              dailyShop[activeItem].quantity
+                            )
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
+                      <div className="col-6">
+                        <h5 className="text-center">
+                          {quantity[activeItem] *
+                            ethers.utils.formatUnits(
+                              dailyShop[activeItem].price,
+                              "gwei"
+                            )}{" "}
+                          Ether
+                        </h5>
+                      </div>
                     </div>
                     <button
-                      className="btn btn-primary m-2"
+                      className="btn btn-primary m-3"
                       onClick={() =>
                         addToBag(
-                          shop.item.toString(),
-                          shop.price,
-                          quantity[index]
+                          dailyShop[activeItem].item.toString(),
+                          dailyShop[activeItem].price,
+                          quantity[activeItem]
                         )
                       }
                     >
@@ -211,7 +272,7 @@ const CityHallModal = ({
                     </button>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
             <div
               id="bag-container"
@@ -250,6 +311,12 @@ const CityHallModal = ({
             exit={{ opacity: 0 }}
             transition={{ type: "tween", duration: 0.25 }}
           >
+            <img
+              src="/back_icon.png"
+              onClick={() => setTraderShow(false)}
+              width={"45px"}
+              alt="back-img"
+            />
             <div className="row justify-content-center">
               <h2 id="modal-title" className="text-center">
                 Trader
