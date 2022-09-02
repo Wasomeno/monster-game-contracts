@@ -110,6 +110,12 @@ const DungeonModal = ({
             exit={{ opacity: 0 }}
             transition={{ type: "tween", duration: 0.25 }}
           >
+            <img
+              src="/back_icon.png"
+              onClick={() => setShowDungeon(false)}
+              width={"45px"}
+              alt="back-img"
+            />
             <div className="row justify-content-center">
               <h2 className="text-center" id="modal-title">
                 Dungeon
@@ -122,8 +128,7 @@ const DungeonModal = ({
                   id="monsters-container"
                   className="d-flex flex-wrap justify-content-center"
                 >
-                  <div className="col" />
-                  <div className="col-10 d-flex flex-wrap justify-content-start">
+                  <div className="d-flex flex-wrap justify-content-center">
                     {loadingMonster ? (
                       <MoonLoader size={50} loading={loadingMonster} />
                     ) : monsters.length < 1 ? (
@@ -134,7 +139,7 @@ const DungeonModal = ({
                       monsters.map((monster, index) => (
                         <>
                           <div
-                            className="card col-5 m-1 d-flex justify-content-center align-items-center"
+                            className="card col-4 d-flex m-2 justify-content-center align-items-center"
                             key={index}
                             style={{ backgroundColor: "#D8CCA3" }}
                           >
@@ -155,51 +160,57 @@ const DungeonModal = ({
                         </>
                       ))
                     )}
+                    <div className="col-4 m-2" />
                   </div>
-                  <div className="col" />
                 </div>
               </div>
               <div className="col">
                 <h3 id="modal-title" className="text-center">
                   Monster on Dungeon
                 </h3>
-                <div className="d-flex flex-wrap justify-content-center">
-                  {loadingOnDungeon ? (
-                    <MoonLoader size={50} loading={loadingOnDungeon} />
-                  ) : onDungeon.length < 1 ? (
-                    <h5 id="modal-title" className="text-center">
-                      No Monster on Dungeon
-                    </h5>
-                  ) : (
-                    onDungeon.map((monster, index) => (
-                      <div
-                        className="card col-4 m-1 d-flex justify-content-center align-items-center"
-                        key={index}
-                        style={{ backgroundColor: "#D8CCA3" }}
-                      >
-                        <img
-                          src="/monster.png"
-                          width={"50%"}
-                          alt="monster-img"
-                        />
-                        <div className="card-body text-center py-1">
-                          <h5
-                            className="card-title text-center"
-                            id="modal-title"
-                          >
-                            Monster #{monster.tokenId.toString()}
-                          </h5>
-                          <button
-                            id="modal-title"
-                            className="btn btn-danger"
-                            onClick={() => claimBossFight(monster.tokenId)}
-                          >
-                            Home
-                          </button>
+                <div
+                  id="monsters-container"
+                  className="d-flex flex-wrap justify-content-center"
+                >
+                  <div className="d-flex flex-wrap justify-content-center">
+                    {loadingOnDungeon ? (
+                      <MoonLoader size={50} loading={loadingOnDungeon} />
+                    ) : onDungeon.length < 1 ? (
+                      <h5 id="modal-title" className="text-center">
+                        No Monster on Dungeon
+                      </h5>
+                    ) : (
+                      onDungeon.map((monster, index) => (
+                        <div
+                          className="card col-4 m-2 d-flex justify-content-center align-items-center"
+                          key={index}
+                          style={{ backgroundColor: "#D8CCA3" }}
+                        >
+                          <img
+                            src="/monster.png"
+                            width={"50%"}
+                            alt="monster-img"
+                          />
+                          <div className="card-body text-center py-1">
+                            <h5
+                              className="card-title text-center"
+                              id="modal-title"
+                            >
+                              Monster #{monster.tokenId.toString()}
+                            </h5>
+                            <button
+                              id="modal-title"
+                              className="btn btn-danger"
+                              onClick={() => claimBossFight(monster.tokenId)}
+                            >
+                              Home
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))
-                  )}
+                      ))
+                    )}
+                    <div className="col-4 m-2" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -240,7 +251,7 @@ const DungeonModal = ({
                 <div className="row justify-content-center">
                   <div className="col-3 d-flex justify-content-center">
                     <button
-                      id="missions-button"
+                      id="beginner-mission-button"
                       className="btn btn-primary"
                       onClick={() => setShowBeginner(true)}
                     >
@@ -249,7 +260,7 @@ const DungeonModal = ({
                   </div>
                   <div className="col-3 d-flex justify-content-center">
                     <button
-                      id="missions-button"
+                      id="intermediate-mission-button"
                       className="btn btn-primary"
                       onClick={() => setShowInter(true)}
                     >
