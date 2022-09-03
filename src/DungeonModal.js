@@ -243,25 +243,35 @@ const DungeonModal = ({
                 exit={{ opacity: 0 }}
                 transition={{ type: "tween", duration: 0.25 }}
               >
-                <div className="row justify-center align-items-center h-25">
+                <div className="row justify-center align-items-center">
                   <h2 id="modal-title" className="text-center">
                     Missions
                   </h2>
                 </div>
                 <div className="row justify-content-center">
-                  <div className="col-3 d-flex justify-content-center">
+                  <div className="col-6 text-center border border-2 border-dark rounded">
+                    <h5 id="modal-title" className="py-2">
+                      Send your monsters to a mission! you can choose between
+                      beginner mission and intermediate mission. The rewards
+                      between beginner and intermediate mission will be
+                      different, the intermediate one of course will reward you
+                      more. But there's a level 3 requirement for your monsters
+                      to enter the intermediate mission.
+                    </h5>
+                  </div>
+                </div>
+                <div className="row justify-content-center my-3 p-2">
+                  <div className="col-6 d-flex justify-content-between ">
                     <button
                       id="beginner-mission-button"
-                      className="btn btn-primary"
+                      className="btn btn-success border border-2 border-dark col-5"
                       onClick={() => setShowBeginner(true)}
                     >
                       Beginner Mission
                     </button>
-                  </div>
-                  <div className="col-3 d-flex justify-content-center">
                     <button
                       id="intermediate-mission-button"
-                      className="btn btn-primary"
+                      className="btn btn-success border border-2 border-dark col-5"
                       onClick={() => setShowInter(true)}
                     >
                       Intermediate Mission
