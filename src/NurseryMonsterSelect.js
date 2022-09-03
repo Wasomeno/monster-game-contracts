@@ -7,11 +7,15 @@ import ReactDOM from "react-dom";
 
 const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
 
-const NurseryMonsterSelect = ({ showSelectMonster, setShowSelectMonster }) => {
+const NurseryMonsterSelect = ({
+  showSelectMonster,
+  setShowSelectMonster,
+  monsterSelected,
+  setMonsterSelected,
+}) => {
   const [monsters, setMonsters] = useState([]);
   const [loadingMonster, setLoadingMonster] = useState(false);
   const [duration, setDuration] = useState([]);
-  const [monsterSelected, setMonsterSelected] = useState([]);
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const monsterContract = new ethers.Contract(
@@ -39,13 +43,11 @@ const NurseryMonsterSelect = ({ showSelectMonster, setShowSelectMonster }) => {
 
   function checkSelectedMonsters(monster) {
     let result = true;
-    let selectedMonsters = monsterSelected;
-    if (selectedMonsters.length < 1) {
-      selectedMonsters.push(monster);
-      setMonsterSelected(selectedMonsters);
+    if (monsterSelected.length < 1) {
+      setMonsterSelected((currentSelected) => [...currentSelected, monster]);
     } else {
-      for (let i = 0; i < selectedMonsters.length; i++) {
-        if (monster === selectedMonsters[i]) {
+      for (let i = 0; i < monsterSelected.length; i++) {
+        if (monster === monsterSelected[i]) {
           result = false;
         }
       }
@@ -55,14 +57,21 @@ const NurseryMonsterSelect = ({ showSelectMonster, setShowSelectMonster }) => {
   }
 
   function selectMonster(index) {
-    let selectedMonsters = monsterSelected;
     if (monsterSelected.length >= 6) return;
     let monster = monsters[index];
     let result = checkSelectedMonsters(monster.toString());
     if (!result) return;
-    selectedMonsters.push(monster.toString());
-    setMonsterSelected(selectedMonsters);
-    console.log(monsterSelected);
+    setMonsterSelected((currentSelected) => [
+      ...currentSelected,
+      monster.toString(),
+    ]);
+  }
+
+  function deselectMonster(index) {
+    let monster = monsterSelected[index];
+    setMonsterSelected((currentSelected) =>
+      currentSelected.filter((monsterSelected) => monsterSelected !== monster)
+    );
   }
 
   useEffect(() => {
@@ -72,15 +81,6 @@ const NurseryMonsterSelect = ({ showSelectMonster, setShowSelectMonster }) => {
   if (!showSelectMonster) return;
   return (
     <>
-      <motion.div
-        id="modal-screen"
-        className="h-100 w-100 bg-dark bg-opacity-75"
-        // onClick={() => setShowNursery(false)}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ type: "tween", duration: 0.25 }}
-      />
       <motion.div
         id="shop-modal"
         className="container w-75 h-75"
@@ -153,108 +153,37 @@ const NurseryMonsterSelect = ({ showSelectMonster, setShowSelectMonster }) => {
             <div className="col">
               <div className="row justify-content-center align-items-center">
                 <h4 className="p-3 text-center" id="modal-title">
-                  0 Monster Selected
+                  {monsterSelected.length} Monster Selected
                 </h4>
               </div>
               <div className="row flex-column justify-content-start align-items-center">
-                <div
-                  className="p-2 my-2 text-cnter d-flex justify-content-center align-items-center"
-                  style={{
-                    backgroundColor: "#D8CCA3",
-                    width: "4rem",
-                    height: "4rem",
-                  }}
-                >
-                  {monsterSelected[0] !== undefined ? (
-                    <img src="/monster.png" width={"100%"} alt="monster-img" />
-                  ) : (
-                    <h6> + </h6>
-                  )}
-                </div>
-                <div
-                  className="p-2 my-2 text-cnter d-flex justify-content-center align-items-center"
-                  style={{
-                    backgroundColor: "#D8CCA3",
-                    width: "4rem",
-                    height: "4rem",
-                  }}
-                >
-                  {monsterSelected[1] !== undefined ? (
-                    <img src="/monster.png" width={"100%"} alt="monster-img" />
-                  ) : (
-                    <h6> + </h6>
-                  )}
-                </div>
-                <div
-                  className="p-2 my-2 text-cnter d-flex justify-content-center align-items-center"
-                  style={{
-                    backgroundColor: "#D8CCA3",
-                    width: "4rem",
-                    height: "4rem",
-                  }}
-                >
-                  {monsterSelected[2] !== undefined ? (
-                    <img src="/monster.png" width={"100%"} alt="monster-img" />
-                  ) : (
-                    <h6> + </h6>
-                  )}
-                </div>
-                <div
-                  className="p-2 my-2 text-cnter d-flex justify-content-center align-items-center"
-                  style={{
-                    backgroundColor: "#D8CCA3",
-                    width: "4rem",
-                    height: "4rem",
-                  }}
-                >
-                  {monsterSelected[3] !== undefined ? (
-                    <img src="/monster.png" width={"100%"} alt="monster-img" />
-                  ) : (
-                    <h6> + </h6>
-                  )}
-                </div>
-                <div
-                  className="p-2 my-2 text-cnter d-flex justify-content-center align-items-center"
-                  style={{
-                    backgroundColor: "#D8CCA3",
-                    width: "4rem",
-                    height: "4rem",
-                  }}
-                >
-                  {monsterSelected[4] !== undefined ? (
-                    <img src="/monster.png" width={"100%"} alt="monster-img" />
-                  ) : (
-                    <h6> + </h6>
-                  )}
-                </div>
-                <div
-                  className="p-2 my-2 text-cnter d-flex justify-content-center align-items-center"
-                  style={{
-                    backgroundColor: "#D8CCA3",
-                    width: "4rem",
-                    height: "4rem",
-                  }}
-                >
-                  {monsterSelected[5] !== undefined ? (
-                    <img src="/monster.png" width={"100%"} alt="monster-img" />
-                  ) : (
-                    <h6> + </h6>
-                  )}
-                </div>
-                <div
-                  className="p-2 my-2 text-cnter d-flex justify-content-center align-items-center"
-                  style={{
-                    backgroundColor: "#D8CCA3",
-                    width: "4rem",
-                    height: "4rem",
-                  }}
-                >
-                  {monsterSelected[6] !== undefined ? (
-                    <img src="/monster.png" width={"100%"} alt="monster-img" />
-                  ) : (
-                    <h6> + </h6>
-                  )}
-                </div>
+                {monsterSelected.map((monster, index) => (
+                  <div
+                    key={index}
+                    className="p-2 my-2 text-cnter d-flex justify-content-center align-items-start"
+                  >
+                    <button
+                      className="btn btn-danger rounded-circle"
+                      onClick={() => deselectMonster(index)}
+                    >
+                      X
+                    </button>
+                    <div
+                      className="p-2 my-2 text-cnter d-flex justify-content-center align-items-center"
+                      style={{
+                        backgroundColor: "#D8CCA3",
+                        width: "4rem",
+                        height: "4rem",
+                      }}
+                    >
+                      {monsterSelected[0] !== undefined ? (
+                        monster
+                      ) : (
+                        <h6> + </h6>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
