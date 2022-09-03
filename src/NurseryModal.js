@@ -9,8 +9,9 @@ import NurseryMonsterSelect from "./NurseryMonsterSelect";
 const NurseryContract = "0xCe1641A6d54F67859AF935164E6Aa1F1Bd1a463A";
 
 const NurseryModal = ({ showNursery, setShowNursery }) => {
-  const [onNursery, setOnNursery] = useState([0, 0, 0, 0, 0, 0]);
+  const [onNursery, setOnNursery] = useState([]);
   const [showSelectMonster, setShowSelectMonster] = useState(false);
+  const [monsterSelected, setMonsterSelected] = useState([]);
   const [loadingOnNursery, setLoadingOnNursery] = useState(false);
   const [duration, setDuration] = useState([]);
   const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -133,7 +134,7 @@ const NurseryModal = ({ showNursery, setShowNursery }) => {
         </div>
         <div className="row justify-content-center my-3">
           <div className="p-3 col-6 d-flex justify-content-center align-items-center border border-dark border-2 rounded">
-            {onNursery.map((index) => (
+            {monsterSelected.map((monster, index) => (
               <div
                 className="p-2 mx-2 text-center d-flex justify-content-center align-items-center"
                 style={{
@@ -142,7 +143,7 @@ const NurseryModal = ({ showNursery, setShowNursery }) => {
                   height: "4rem",
                 }}
               >
-                +
+                {monster}
               </div>
             ))}
           </div>
@@ -154,14 +155,22 @@ const NurseryModal = ({ showNursery, setShowNursery }) => {
           >
             Select Monsters
           </button>
-          <button className="btn btn-success p-2 col-3 m-2">
-            Bring back Monsters
-          </button>
+          {onNursery.length < 1 ? (
+            <button className="btn btn-success p-2 col-3 m-2">
+              Send Monsters
+            </button>
+          ) : (
+            <button className="btn btn-danger p-2 col-3 m-2">
+              Bring back Monsters
+            </button>
+          )}
         </div>
       </motion.div>
       <NurseryMonsterSelect
         showSelectMonster={showSelectMonster}
         setShowSelectMonster={setShowSelectMonster}
+        monsterSelected={monsterSelected}
+        setMonsterSelected={setMonsterSelected}
       />
     </>,
     document.getElementById("modal")
