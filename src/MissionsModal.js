@@ -18,7 +18,8 @@ const MissionsModal = ({
   const [onMission, setOnMission] = useState([]);
   const [monsters, setMonsters] = useState([]);
   const [loadingOnMission, setLoadingOnMission] = useState(false);
-  const [monsterSelected, setMonsterSelected] = useState([]);
+  const [beginnerSelected, setBeginnerSelected] = useState([]);
+  const [interSelected, setInterSelected] = useState([]);
   const [showBeginnerSelect, setShowBeginnerSelect] = useState(false);
   const [showInterMediateSelect, setShowInterMediateSelect] = useState(false);
 
@@ -139,24 +140,28 @@ const MissionsModal = ({
                 </div>
                 <div className="row justify-content-center my-3">
                   <div className="p-3 col-6 d-flex justify-content-center align-items-center border border-dark border-2 rounded">
-                    {monsterSelected.map((monster, index) => (
-                      <div
-                        key={index}
-                        className="p-2 mx-2 text-center d-flex justify-content-center align-items-center"
-                        style={{
-                          backgroundColor: "#D8CCA3",
-                          width: "4rem",
-                          height: "4rem",
-                        }}
-                      >
-                        {monster}
-                      </div>
-                    ))}
+                    {beginnerSelected.length !== 0 ? (
+                      beginnerSelected.map((monster, index) => (
+                        <div
+                          key={index}
+                          className="p-2 mx-2 text-center d-flex justify-content-center align-items-center"
+                          style={{
+                            backgroundColor: "#D8CCA3",
+                            width: "4rem",
+                            height: "4rem",
+                          }}
+                        >
+                          {monster}
+                        </div>
+                      ))
+                    ) : (
+                      <h5 id="modal-title">No Monsters Selected</h5>
+                    )}
                   </div>
                 </div>
                 <div className="row justify-content-center p-2 my-3">
                   <button
-                    id="modal-title"
+                    style={{ fontSize: "20px", fontFamily: "Monogram" }}
                     className="btn btn-primary p-2 col-3 m-2"
                     onClick={() => setShowBeginnerSelect(true)}
                   >
@@ -164,14 +169,14 @@ const MissionsModal = ({
                   </button>
                   {onMission.length < 1 ? (
                     <button
-                      id="modal-title"
+                      style={{ fontSize: "20px", fontFamily: "Monogram" }}
                       className="btn btn-success p-2 col-3 m-2"
                     >
                       Send Monsters
                     </button>
                   ) : (
                     <button
-                      id="modal-title"
+                      style={{ fontSize: "20px", fontFamily: "Monogram" }}
                       className="btn btn-danger p-2 col-3 m-2"
                     >
                       Bring back Monsters
@@ -183,8 +188,8 @@ const MissionsModal = ({
               <BeginnerMissionMonsterSelect
                 showBeginnerSelect={showBeginnerSelect}
                 setShowBeginnerSelect={setShowBeginnerSelect}
-                monsterSelected={monsterSelected}
-                setMonsterSelected={setMonsterSelected}
+                monsterSelected={beginnerSelected}
+                setMonsterSelected={setBeginnerSelected}
               />
             )}
           </motion.div>
@@ -193,7 +198,11 @@ const MissionsModal = ({
         <>
           <img
             src="/back_icon.png"
-            onClick={() => setShowInter(false)}
+            onClick={() =>
+              showInterMediateSelect
+                ? setShowInterMediateSelect(false)
+                : setShowInter(false)
+            }
             width={"45px"}
             alt="back-img"
           />
@@ -223,24 +232,28 @@ const MissionsModal = ({
                 </div>
                 <div className="row justify-content-center my-3">
                   <div className="p-3 col-6 d-flex justify-content-center align-items-center border border-dark border-2 rounded">
-                    {monsterSelected.map((monster, index) => (
-                      <div
-                        key={index}
-                        className="p-2 mx-2 text-center d-flex justify-content-center align-items-center"
-                        style={{
-                          backgroundColor: "#D8CCA3",
-                          width: "4rem",
-                          height: "4rem",
-                        }}
-                      >
-                        {monster}
-                      </div>
-                    ))}
+                    {interSelected.length !== 0 ? (
+                      interSelected.map((monster, index) => (
+                        <div
+                          key={index}
+                          className="p-2 mx-2 text-center d-flex justify-content-center align-items-center"
+                          style={{
+                            backgroundColor: "#D8CCA3",
+                            width: "4rem",
+                            height: "4rem",
+                          }}
+                        >
+                          {monster}
+                        </div>
+                      ))
+                    ) : (
+                      <h5 id="modal-title">No Monsters Selected</h5>
+                    )}
                   </div>
                 </div>
                 <div className="row justify-content-center p-2 my-3">
                   <button
-                    id="modal-title"
+                    style={{ fontSize: "20px", fontFamily: "Monogram" }}
                     className="btn btn-primary p-2 col-3 m-2"
                     onClick={() => setShowInterMediateSelect(true)}
                   >
@@ -248,15 +261,15 @@ const MissionsModal = ({
                   </button>
                   {onMission.length < 1 ? (
                     <button
-                      id="modal-title"
-                      className="btn btn-success p-2 col-3 m-2"
+                      className="btn btn-success col-3 m-2"
+                      style={{ fontSize: "20px", fontFamily: "Monogram" }}
                     >
                       Send Monsters
                     </button>
                   ) : (
                     <button
-                      id="modal-title"
-                      className="btn btn-danger p-2 col-3 m-2"
+                      style={{ fontSize: "20px", fontFamily: "Monogram" }}
+                      className="btn btn-danger col-3 m-2"
                     >
                       Bring back Monsters
                     </button>
@@ -267,8 +280,8 @@ const MissionsModal = ({
               <IntermediateMissionMonsterSelect
                 showInterMediateSelect={showInterMediateSelect}
                 setShowInterMediateSelect={setShowInterMediateSelect}
-                monsterSelected={monsterSelected}
-                setMonsterSelected={setMonsterSelected}
+                monsterSelected={interSelected}
+                setMonsterSelected={setInterSelected}
               />
             )}
           </motion.div>

@@ -6,6 +6,7 @@ import MissionsModal from "./MissionsModal";
 import DungeonABI from "../src/api/Dungeon.json";
 import MonsterABI from "../src/api/Monsters.json";
 import MoonLoader from "react-spinners/MoonLoader";
+import DungeonMonsterSelect from "./DungeonMonsterSelect";
 
 const DungeonContract = "0x4f46037fEffa0433E013b77d131019b02042197A";
 const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
@@ -18,9 +19,9 @@ const DungeonModal = ({
 }) => {
   const [showBeginner, setShowBeginner] = useState(false);
   const [showInter, setShowInter] = useState(false);
-  const [monsters, setMonsters] = useState([]);
+  const [showDungeonSelect, setShowDungeonSelect] = useState(false);
   const [onDungeon, setOnDungeon] = useState([]);
-  const [loadingMonster, setLoadingMonster] = useState(false);
+  const [dungeonSelected, setDungeonSelected] = useState([]);
   const [loadingOnDungeon, setLoadingOnDungeon] = useState(false);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -30,26 +31,6 @@ const DungeonModal = ({
     DungeonABI.abi,
     signer
   );
-  const monsterContract = new ethers.Contract(
-    MonsterContract,
-    MonsterABI.abi,
-    signer
-  );
-
-  async function getMonsters() {
-    let monstersTemp = [];
-    setLoadingMonster(true);
-    const myMonsters = await monsterContract.getMyMonster(signer.getAddress());
-    for (let i = 0; i < myMonsters.length; i++) {
-      const status = await monsterContract.getMonsterStatus(myMonsters[i]);
-      if (status.toString() === "0") {
-        monstersTemp.push(myMonsters[i]);
-      }
-    }
-    setMonsters(monstersTemp);
-    setLoadingMonster(false);
-  }
-
   async function getMonstersOnDungeon() {
     setLoadingOnDungeon(true);
     await dungeonContract
@@ -66,7 +47,6 @@ const DungeonModal = ({
       .bossFight(monster, signer.getAddress())
       .then((response) => {
         provider.waitForTransaction(response.hash).then(() => {
-          getMonsters();
           getMonstersOnDungeon();
         });
       });
@@ -77,14 +57,12 @@ const DungeonModal = ({
       .claimBossFight(monster, signer.getAddress())
       .then((response) => {
         provider.waitForTransaction(response.hash).then(() => {
-          getMonsters();
           getMonstersOnDungeon();
         });
       });
   }
 
   useEffect(() => {
-    getMonsters();
     getMonstersOnDungeon();
   }, []);
 
@@ -112,108 +90,87 @@ const DungeonModal = ({
           >
             <img
               src="/back_icon.png"
-              onClick={() => setShowDungeon(false)}
+              onClick={() =>
+                showDungeonSelect
+                  ? setShowDungeonSelect(false)
+                  : setShowDungeon(false)
+              }
               width={"45px"}
               alt="back-img"
             />
-            <div className="row justify-content-center">
-              <h2 className="text-center" id="modal-title">
-                Dungeon
-              </h2>
-              <div className="col">
-                <h3 id="modal-title" className="text-center">
-                  Your Monster
-                </h3>
-                <div
-                  id="monsters-container"
-                  className="d-flex flex-wrap justify-content-center"
-                >
-                  <div className="d-flex flex-wrap justify-content-center">
-                    {loadingMonster ? (
-                      <MoonLoader size={50} loading={loadingMonster} />
-                    ) : monsters.length < 1 ? (
-                      <h5 className="text-center" id="modal-title">
-                        No Monsters in Inventory
-                      </h5>
-                    ) : (
-                      monsters.map((monster, index) => (
-                        <>
-                          <div
-                            className="card col-4 d-flex m-2 justify-content-center align-items-center"
-                            key={index}
-                            style={{ backgroundColor: "#D8CCA3" }}
-                          >
-                            <img src="/monster.png" width={"50%"} alt="..." />
-                            <div className="card-body py-1 text-center">
-                              <h5 className="card-title" id="modal-title">
-                                Monster #{monster.toString()}
-                              </h5>
-                              <button
-                                id="modal-title"
-                                className="btn btn-success m-3"
-                                onClick={() => sendToBossFight(monster)}
-                              >
-                                Send
-                              </button>
-                            </div>
-                          </div>
-                        </>
-                      ))
-                    )}
-                    <div className="col-4 m-2" />
+            {showDungeonSelect ? (
+              <DungeonMonsterSelect
+                showDungeonSelect={showDungeonSelect}
+                setShowDungeonSelect={setShowDungeonSelect}
+                dungeonSelected={dungeonSelected}
+                setDungeonSelected={setDungeonSelected}
+              />
+            ) : (
+              <>
+                <div className="row justify-content-center">
+                  <h2 className="text-center" id="modal-title">
+                    Dungeon
+                  </h2>
+                </div>
+                <div className="row justify-content-center">
+                  <div className="col-6 text-center border border-2 border-dark rounded">
+                    <h5 className="py-2" id="modal-title">
+                      Send your monsters to fight bosses in the dungeon.Dungeon
+                      will give better rewards than the missions. There's a
+                      percentage of what reward that you can get based on the
+                      level of your monster. So no level requirement but the
+                      higher the level of a monster will increase the chances of
+                      getting better rewards.
+                    </h5>
                   </div>
                 </div>
-              </div>
-              <div className="col">
-                <h3 id="modal-title" className="text-center">
-                  Monster on Dungeon
-                </h3>
-                <div
-                  id="monsters-container"
-                  className="d-flex flex-wrap justify-content-center"
-                >
-                  <div className="d-flex flex-wrap justify-content-center">
-                    {loadingOnDungeon ? (
-                      <MoonLoader size={50} loading={loadingOnDungeon} />
-                    ) : onDungeon.length < 1 ? (
-                      <h5 id="modal-title" className="text-center">
-                        No Monster on Dungeon
-                      </h5>
-                    ) : (
-                      onDungeon.map((monster, index) => (
+                <div className="row justify-content-center my-3">
+                  <div className="p-3 col-6 d-flex justify-content-center align-items-center border border-dark border-2 rounded">
+                    {dungeonSelected.length !== 0 ? (
+                      dungeonSelected.map((monster, index) => (
                         <div
-                          className="card col-4 m-2 d-flex justify-content-center align-items-center"
                           key={index}
-                          style={{ backgroundColor: "#D8CCA3" }}
+                          className="p-2 mx-2 text-center d-flex justify-content-center align-items-center"
+                          style={{
+                            backgroundColor: "#D8CCA3",
+                            width: "4rem",
+                            height: "4rem",
+                          }}
                         >
-                          <img
-                            src="/monster.png"
-                            width={"50%"}
-                            alt="monster-img"
-                          />
-                          <div className="card-body text-center py-1">
-                            <h5
-                              className="card-title text-center"
-                              id="modal-title"
-                            >
-                              Monster #{monster.tokenId.toString()}
-                            </h5>
-                            <button
-                              id="modal-title"
-                              className="btn btn-danger"
-                              onClick={() => claimBossFight(monster.tokenId)}
-                            >
-                              Home
-                            </button>
-                          </div>
+                          {monster}
                         </div>
                       ))
+                    ) : (
+                      <h5 id="modal-title">No Monsters Selected</h5>
                     )}
-                    <div className="col-4 m-2" />
                   </div>
                 </div>
-              </div>
-            </div>
+                <div className="row justify-content-center p-2 my-3">
+                  <button
+                    style={{ fontSize: "20px", fontFamily: "Monogram" }}
+                    className="btn btn-primary p-2 col-3 m-2"
+                    onClick={() => setShowDungeonSelect(true)}
+                  >
+                    Select Monsters
+                  </button>
+                  {onDungeon.length < 1 ? (
+                    <button
+                      className="btn btn-success col-3 m-2"
+                      style={{ fontSize: "20px", fontFamily: "Monogram" }}
+                    >
+                      Send Monsters
+                    </button>
+                  ) : (
+                    <button
+                      style={{ fontSize: "20px", fontFamily: "Monogram" }}
+                      className="btn btn-danger col-3 m-2"
+                    >
+                      Bring back Monsters
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </motion.div>
         </>
       ) : (

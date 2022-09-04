@@ -134,18 +134,22 @@ const NurseryModal = ({ showNursery, setShowNursery }) => {
         </div>
         <div className="row justify-content-center my-3">
           <div className="p-3 col-6 d-flex justify-content-center align-items-center border border-dark border-2 rounded">
-            {monsterSelected.map((monster, index) => (
-              <div
-                className="p-2 mx-2 text-center d-flex justify-content-center align-items-center"
-                style={{
-                  backgroundColor: "#D8CCA3",
-                  width: "4rem",
-                  height: "4rem",
-                }}
-              >
-                {monster}
-              </div>
-            ))}
+            {monsterSelected.length !== 0 ? (
+              monsterSelected.map((monster, index) => (
+                <div
+                  className="p-2 mx-2 text-center d-flex justify-content-center align-items-center"
+                  style={{
+                    backgroundColor: "#D8CCA3",
+                    width: "4rem",
+                    height: "4rem",
+                  }}
+                >
+                  {monster}
+                </div>
+              ))
+            ) : (
+              <h5 id="modal-title">No Monsters Selected</h5>
+            )}
           </div>
         </div>
         <div className="row justify-content-center p-2 my-3">
