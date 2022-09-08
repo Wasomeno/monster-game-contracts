@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Receiver.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "./IMonster.sol";
 
-contract Nursery is ERC1155Receiver {
+contract Nursery {
     struct Rest {
         uint256 monster;
         address owner;
@@ -20,129 +18,77 @@ contract Nursery is ERC1155Receiver {
     }
 
     IMonster monsterInterface;
-    IERC1155 itemInterface;
 
     mapping(address => uint256[]) public ownerToMonsters;
-    mapping(address => mapping(uint256 => Rest)) public monsterOnNursery;
+    mapping(address => mapping(uint256 => Rest)) public monstersOnNursery;
+    mapping(address => bool) public isResting;
 
     function setInterface(address _monsterNFT, address _itemNFT) public {
         monsterInterface = IMonster(_monsterNFT);
-        itemInterface = IERC1155(_itemNFT);
     }
 
-    modifier isOnNursery(address _user, uint256 _tokenId) {
-        bool result;
-        uint256[] memory monsters = ownerToMonsters[_user];
-        for (uint256 i; i < monsters.length; ++i) {
-            uint256 monster = monsters[i];
-            if (_tokenId == monster) {
-                result = true;
-            }
-            require(result, "Your monster is not here");
-        }
+    modifier isRestingMonsters(address _user) {
+        bool status = isResting[_user];
+        require(status, "You're not resting any monsters");
         _;
     }
 
-    function putOnNursery(
-        uint256 _tokenId,
+    function restMonster(
+        uint256[] calldata _monsters,
         address _user,
         uint256 _duration
     ) external payable {
-        uint256 hunger = monsterInterface.getMonsterHunger(_tokenId);
-        uint256 status = monsterInterface.getMonsterStatus(_tokenId);
-        require(status == 0, "Your monster still working on something");
-        require(_duration * 10 + hunger <= 100, "Reduce the duration");
-        require(msg.value >= _duration * 0.0001 ether, "Wrong value sent");
-        monsterOnNursery[_user][_tokenId] = Rest(
-            _tokenId,
-            _user,
-            _duration,
-            block.timestamp
-        );
-        ownerToMonsters[_user].push(_tokenId);
-        monsterInterface.setStatus(_tokenId, 2);
+        require(_monsters.length <= 6, "Exceed Limit");
+        for (uint256 i; i < _monsters.length; ++i) {
+            uint256 monster = _monsters[i];
+            uint256 hunger = monsterInterface.getMonsterHunger(monster);
+            uint256 status = monsterInterface.getMonsterStatus(monster);
+            require(status == 0, "Your monster still working on something");
+            require(_duration * 10 + hunger <= 100, "Reduce the duration");
+            require(msg.value >= _duration * 0.0001 ether, "Wrong value sent");
+            monsterInterface.setStatus(monster, 2);
+            monstersOnNursery[_user][monster] = Rest(
+                monster,
+                _user,
+                _duration,
+                block.timestamp
+            );
+        }
+        ownerToMonsters[_user] = _monsters;
     }
 
-    function goBackHome(uint256 _tokenId, address _user)
-        external
-        isOnNursery(_user, _tokenId)
-    {
-        Rest memory monsterDetails = monsterOnNursery[_user][_tokenId];
-        uint256 startTime = monsterDetails.startTime;
-        uint256 hunger = monsterInterface.getMonsterHunger(_tokenId);
-        uint256 duration = monsterDetails.duration;
-        uint256 durationToHour = duration * 1 hours;
-        uint256 newHunger = duration * 10;
-        require(
-            startTime + durationToHour < block.timestamp,
-            "Your monster still resting"
-        );
-        monsterInterface.feedMonster(_tokenId, newHunger);
-        monsterInterface.setStatus(_tokenId, 0);
-        deleteMonster(_tokenId, _user);
-    }
-
-    function deleteMonster(uint256 _tokenId, address _user) internal {
-        uint256 index;
-        Rest storage monsterDetails = monsterOnNursery[_user][_tokenId];
-        uint256[] storage monsters = ownerToMonsters[_user];
-        uint256 monstersLength = monsters.length;
-        delete monsterDetails.monster;
-        delete monsterDetails.owner;
-        delete monsterDetails.duration;
-        delete monsterDetails.startTime;
-
-        for (uint256 i; i < monstersLength; ++i) {
+    function finishResting(address _user) external isRestingMonsters(_user) {
+        uint256[] memory monsters = ownerToMonsters[_user];
+        for (uint256 i; i < monsters.length; ++i) {
             uint256 monster = monsters[i];
-            if (monster == _tokenId) {
-                index = i;
-            }
+            Rest memory monsterDetails = monstersOnNursery[_user][monster];
+            uint256 startTime = monsterDetails.startTime;
+            uint256 hunger = monsterInterface.getMonsterHunger(monster);
+            uint256 duration = monsterDetails.duration;
+            uint256 newHunger = duration * 10;
+            uint256 timeElapsed = startTime + duration;
+            require(
+                timeElapsed <= block.timestamp,
+                "Your monster still resting"
+            );
+            monsterInterface.feedMonster(monster, newHunger);
+            monsterInterface.setStatus(monster, 0);
         }
-        monsters[index] = monsters[monstersLength - 1];
-        monsters.pop();
+        deleteMonster(_user);
     }
 
-    function getMyMonsters(address _user)
-        external
-        view
-        returns (Rest[] memory monsters)
-    {
-        uint256[] memory myMonsters = ownerToMonsters[_user];
-        Rest[] memory details = new Rest[](myMonsters.length);
-        for (uint256 i; i < myMonsters.length; ++i) {
-            uint256 tokenId = myMonsters[i];
-            details[i] = monsterOnNursery[_user][tokenId];
+    function deleteMonster(address _user) internal {
+        uint256[] memory monsters = ownerToMonsters[_user];
+        for (uint256 i; i < monsters.length; ++i) {
+            uint256 monster = monsters[i];
+            Rest memory monsterDetails = monstersOnNursery[_user][monster];
+            delete monsterDetails.monster;
+            delete monsterDetails.owner;
+            delete monsterDetails.duration;
+            delete monsterDetails.startTime;
         }
-        monsters = details;
+        delete monsters;
     }
 
     receive() external payable {}
-
-    function onERC1155BatchReceived(
-        address _operator,
-        address _from,
-        uint256[] calldata _ids,
-        uint256[] calldata _values,
-        bytes calldata _data
-    ) external pure override returns (bytes4) {
-        bytes4(
-            keccak256(
-                "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"
-            )
-        );
-    }
-
-    function onERC1155Received(
-        address _operator,
-        address _from,
-        uint256 _id,
-        uint256 _value,
-        bytes calldata _data
-    ) external pure override returns (bytes4) {
-        bytes4(
-            keccak256(
-                "onERC1155Received(address,address,uint256,uint256,bytes)"
-            )
-        );
-    }
 }
