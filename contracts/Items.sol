@@ -56,6 +56,24 @@ contract Items is ERC1155 {
         bossRateSet[0].push(10);
     }
 
+    event BeginnerMissionReward(
+        uint256 _monster,
+        uint256[] _items,
+        uint256[] _amount
+    );
+
+    event IntermediateMissionReward(
+        uint256 _monster,
+        uint256[] _items,
+        uint256[] _amount
+    );
+
+    event BossFightReward(
+        uint256 _monster,
+        uint256[] _items,
+        uint256[] _amount
+    );
+
     function setInterface(address _monsterGame, address _monsterNFT) external {
         gameInterface = IMonsterGame(_monsterGame);
         monsterInterface = IMonster(_monsterNFT);
@@ -98,35 +116,92 @@ contract Items is ERC1155 {
         }
     }
 
-    function beginnerMissionReward(address _user, uint256 _odds) external {
+    function beginnerMissionReward(
+        uint256 _monster,
+        address _user,
+        uint256 _odds
+    ) external {
         if (_odds <= 60 && 0 <= _odds) {
-            _mintBatch(_user, itemSet[0], itemRateSet[0], "");
+            uint256[] memory itemsSetOne = itemSet[0];
+            uint256[] memory quantitiesSetOne = itemRateSet[0];
+            _mintBatch(_user, itemsSetOne, quantitiesSetOne, "");
+            emit BeginnerMissionReward(_monster, itemsSetOne, quantitiesSetOne);
         } else if (_odds <= 90 && 70 <= _odds) {
-            _mintBatch(_user, itemSet[1], itemRateSet[1], "");
+            uint256[] memory itemsSetTwo = itemSet[1];
+            uint256[] memory quantitiesSetTwo = itemRateSet[1];
+            _mintBatch(_user, itemsSetTwo, quantitiesSetTwo, "");
+            emit BeginnerMissionReward(_monster, itemsSetTwo, quantitiesSetTwo);
         } else {
-            _mintBatch(_user, itemSet[2], itemRateSet[2], "");
+            uint256[] memory itemsSetThree = itemSet[2];
+            uint256[] memory quantitiesSetThree = itemRateSet[2];
+            _mintBatch(_user, itemsSetThree, quantitiesSetThree, "");
+            emit BeginnerMissionReward(
+                _monster,
+                itemsSetThree,
+                quantitiesSetThree
+            );
         }
     }
 
-    function intermediateMissionReward(address _user, uint256 _odds) external {
+    function intermediateMissionReward(
+        uint256 _monster,
+        address _user,
+        uint256 _odds
+    ) external {
         if (_odds <= 60 && 0 <= _odds) {
-            _mintBatch(_user, itemSet[3], itemRateSet[3], "");
+            uint256[] memory itemsSetFour = itemSet[3];
+            uint256[] memory quantitiesSetFour = itemRateSet[3];
+            _mintBatch(_user, itemsSetFour, quantitiesSetFour, "");
+            emit IntermediateMissionReward(
+                _monster,
+                itemsSetFour,
+                quantitiesSetFour
+            );
         } else if (_odds <= 90 && 70 <= _odds) {
-            _mintBatch(_user, itemSet[4], itemRateSet[4], "");
+            uint256[] memory itemsSetFive = itemSet[4];
+            uint256[] memory quantitiesSetFive = itemRateSet[4];
+            _mintBatch(_user, itemsSetFive, quantitiesSetFive, "");
+            emit IntermediateMissionReward(
+                _monster,
+                itemsSetFive,
+                quantitiesSetFive
+            );
         } else {
-            _mintBatch(_user, itemSet[5], itemRateSet[5], "");
+            uint256[] memory itemsSetSix = itemSet[5];
+            uint256[] memory quantitiesSetSix = itemRateSet[5];
+            _mintBatch(_user, itemsSetSix, quantitiesSetSix, "");
+            emit IntermediateMissionReward(
+                _monster,
+                itemsSetSix,
+                quantitiesSetSix
+            );
         }
     }
 
     function bossFightReward(
+        uint256 _monster,
         address _user,
         uint256 _odds,
         uint256 _chance
     ) external {
         if (_odds < _chance) {
-            _mintBatch(_user, bossRewardSet[0], bossRateSet[0], "");
+            uint256[] memory bossItemsSetOne = bossRewardSet[0];
+            uint256[] memory bossQuantitiesSetOne = bossRateSet[0];
+            _mintBatch(_user, bossItemsSetOne, bossQuantitiesSetOne, "");
+            emit BossFightReward(
+                _monster,
+                bossItemsSetOne,
+                bossQuantitiesSetOne
+            );
         } else {
-            _mintBatch(_user, bossRewardSet[1], bossRateSet[1], "");
+            uint256[] memory bossItemsSetTwo = bossRewardSet[1];
+            uint256[] memory bossQuantitiesSetTwo = bossRateSet[1];
+            _mintBatch(_user, bossItemsSetTwo, bossQuantitiesSetTwo, "");
+            emit BossFightReward(
+                _monster,
+                bossItemsSetTwo,
+                bossQuantitiesSetTwo
+            );
         }
     }
 
@@ -137,7 +212,7 @@ contract Items is ERC1155 {
     ) external {
         uint256 balance = balanceOf(_user, HUNGER_POTION);
         uint256 hunger = monsterInterface.getMonsterHunger(_tokenId);
-        uint256 newHunger = hunger + 5;
+        uint256 newHunger = hunger + 10;
         require(balance > _amount, "Not enough items");
         require(newHunger <= 100, "Too much hunger");
         safeTransferFrom(_user, address(this), HUNGER_POTION, _amount, "");
@@ -151,10 +226,10 @@ contract Items is ERC1155 {
     ) external {
         uint256 balance = balanceOf(_user, EXP_BOTTLE);
         uint256 exp = monsterInterface.getMonsterExp(_tokenId);
-        uint256 newExp = exp + 1;
+        uint256 newExp = exp + 3;
         require(balance >= _amount, "Not enough items");
         safeTransferFrom(_user, address(this), EXP_BOTTLE, _amount, "");
-        monsterInterface.expUp(_tokenId, 1);
+        monsterInterface.expUp(_tokenId, 3);
     }
 
     function getInventory(address _user)
@@ -170,35 +245,10 @@ contract Items is ERC1155 {
                 inventoryTemp[i] = (balanceOf(_user, i));
             }
         }
-
         inventory = inventoryTemp;
     }
 
     function getItems() external view returns (uint256[] memory _items) {
         _items = items;
-    }
-
-    function isItemExists(uint256 _itemId) internal view returns (bool result) {
-        uint256 length = items.length;
-        for (uint256 i; i < length; ++i) {
-            uint256 item = items[i];
-            if (_itemId == item) {
-                result = true;
-            }
-        }
-    }
-
-    function areItemsExists(uint256[] memory _itemId)
-        internal
-        view
-        returns (bool result)
-    {
-        uint256 length = items.length;
-        for (uint256 i; i < length; ++i) {
-            uint256 item = items[i];
-            if (_itemId[i] == item) {
-                result = true;
-            }
-        }
     }
 }
