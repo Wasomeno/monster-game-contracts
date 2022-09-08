@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Monsters is ERC721, Ownable {
     struct Stats {
+        uint256 id;
         uint256 level;
         uint256 hunger;
         uint256 exp;
@@ -29,16 +30,20 @@ contract Monsters is ERC721, Ownable {
         require(msg.value == _quantity * price, "Wrong value of ether sent");
         for (uint256 i; i < _quantity; ++i) {
             _safeMint(msg.sender, monsterPopulation);
-            monsterStats[monsterPopulation] = Stats(1, 30, 0, 15, 0, 0);
+            monsterStats[monsterPopulation] = Stats(
+                monsterPopulation,
+                1,
+                30,
+                0,
+                15,
+                0,
+                0
+            );
             monsterPopulation++;
         }
     }
 
-    function getMyMonster(address _to)
-        external
-        view
-        returns (uint256[] memory)
-    {
+    function getMonsters(address _to) public view returns (uint256[] memory) {
         uint256[] memory monsters = new uint256[](balanceOf(_to));
         uint256 _monsterPopulation = monsterPopulation;
         uint256 index = 0;
@@ -50,6 +55,21 @@ contract Monsters is ERC721, Ownable {
             index++;
         }
         return monsters;
+    }
+
+    function getMonstersDetails(address _to)
+        external
+        view
+        returns (Stats[] memory)
+    {
+        uint256[] memory monsters = getMonsters(_to);
+        Stats[] memory monstersDetails = new Stats[](monsters.length);
+        for (uint256 i; i < monsters.length; ++i) {
+            uint256 monster = monsters[i];
+            Stats memory details = monsterStats[monster];
+            monstersDetails[i] = details;
+        }
+        return monstersDetails;
     }
 
     function levelUp(uint256 _tokenId) internal {
