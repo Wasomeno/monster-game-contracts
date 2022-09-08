@@ -17,14 +17,15 @@ contract MonsterGame is IERC721Receiver {
         address owner;
     }
 
+    uint256 nonce;
+
     mapping(address => uint256[]) public monstersOnBeginner;
     mapping(address => uint256[]) public monstersOnIntermediate;
     mapping(address => mapping(uint256 => Details))
         public monstersOnBeginnerDetails;
     mapping(address => mapping(uint256 => Details))
         public monstersOnIntermediateDetails;
-
-    uint256 nonce;
+    mapping(address => bool) public isOnMission;
 
     function setInterface(address monsterNFT, address itemNFT) public {
         monsterInterface = IERC721(monsterNFT);
@@ -32,74 +33,65 @@ contract MonsterGame is IERC721Receiver {
         itemsInterface = IItems(itemNFT);
     }
 
-    modifier isOnBeginner(address _user, uint256 _tokenId) {
-        bool result;
+    modifier onMission(address _user) {
+        bool status = isOnMission[_user];
+        require(status, "You're not on a mission");
+        _;
+    }
+
+    modifier notOnMission(address _user) {
+        bool status = isOnMission[_user];
+        require(!status, "You're on a mission");
+        _;
+    }
+
+    function claimBeginnerMission(address _user) external onMission(_user) {
         uint256[] memory monsters = monstersOnBeginner[_user];
         for (uint256 i; i < monsters.length; ++i) {
-            uint256 monsterId = monsters[i];
-            if (_tokenId == monsterId) {
-                result = true;
-            }
+            uint256 monster = monsters[i];
+            Details memory details = monstersOnBeginnerDetails[_user][monster];
+            uint256 missionStart = details.missionStart;
+            uint256 hunger = statsInterface.getMonsterHunger(monster);
+            uint256 newHunger = hunger - 10;
+            uint256 expEarned = 4;
+            require(
+                missionStart + 15 minutes <= block.timestamp,
+                "Duration not over yet"
+            );
+            statsInterface.setCooldown(monster);
+            statsInterface.setHunger(monster, newHunger);
+            statsInterface.expUp(monster, expEarned);
+            statsInterface.setStatus(monster, 0);
+            itemsInterface.beginnerMissionReward(_user, randomNumber());
         }
-        require(result, "Monster not found");
-        _;
-    }
-
-    modifier isOnIntermediate(address _user, uint256 _tokenId) {
-        bool result;
-        uint256[] memory monsters = monstersOnIntermediate[_user];
-        for (uint256 i; i < monsters.length; ++i) {
-            uint256 monsterId = monsters[i];
-            if (_tokenId == monsterId) {
-                result = true;
-            }
-        }
-        require(result, "Monster not found");
-        _;
-    }
-
-    function claimBeginnerMission(uint256 _tokenId, address _user)
-        external
-        isOnBeginner(_user, _tokenId)
-    {
-        Details memory details = monstersOnBeginnerDetails[_user][_tokenId];
-        uint256 missionStart = details.missionStart;
-        uint256 hunger = statsInterface.getMonsterHunger(_tokenId);
-        uint256 newHunger = hunger - 10;
-        uint256 expEarned = 4;
-        require(
-            missionStart + 15 minutes <= block.timestamp,
-            "Duration not over yet"
-        );
-        statsInterface.setCooldown(_tokenId);
-        statsInterface.setHunger(_tokenId, newHunger);
-        statsInterface.expUp(_tokenId, expEarned);
-
-        itemsInterface.beginnerMissionReward(_user, randomNumber());
-        statsInterface.setStatus(_tokenId, 0);
-        deleteMonsterOnBeg(_tokenId, _user);
+        deleteMonsterOnBeg(_user);
     }
 
     function claimIntermediateMission(uint256 _tokenId, address _user)
         external
-        isOnIntermediate(_user, _tokenId)
+        onMission(_user)
     {
-        Details memory details = monstersOnIntermediateDetails[_user][_tokenId];
-        uint256 missionStart = details.missionStart;
-        uint256 hunger = statsInterface.getMonsterHunger(_tokenId);
-        uint256 newHunger = hunger - 10;
-        uint256 expEarned = 8;
-        require(
-            missionStart + 30 minutes <= block.timestamp,
-            "Duration not over yet"
-        );
-        statsInterface.setCooldown(_tokenId);
-        statsInterface.setHunger(_tokenId, newHunger);
-        statsInterface.expUp(_tokenId, expEarned);
-
-        itemsInterface.intermediateMissionReward(_user, randomNumber());
-        statsInterface.setStatus(_tokenId, 0);
-        deleteMonsterOnInt(_user, _tokenId);
+        uint256[] memory monsters = monstersOnIntermediate[_user];
+        for (uint256 i; i < monsters.length; ++i) {
+            uint256 monster = monsters[i];
+            Details memory details = monstersOnIntermediateDetails[_user][
+                monster
+            ];
+            uint256 missionStart = details.missionStart;
+            uint256 hunger = statsInterface.getMonsterHunger(monster);
+            uint256 newHunger = hunger - 10;
+            uint256 expEarned = 8;
+            require(
+                missionStart + 30 minutes <= block.timestamp,
+                "Duration not over yet"
+            );
+            statsInterface.setCooldown(monster);
+            statsInterface.setHunger(monster, newHunger);
+            statsInterface.expUp(monster, expEarned);
+            statsInterface.setStatus(monster, 0);
+            itemsInterface.intermediateMissionReward(_user, randomNumber());
+        }
+        deleteMonsterOnInt(_user);
     }
 
     function feedIfPassed(
@@ -160,94 +152,102 @@ contract MonsterGame is IERC721Receiver {
         statsInterface.feedMonster(_tokenId, _amount);
     }
 
-    function beginnerMission(uint256 _tokenId, address _user) external {
-        uint256 monsterHunger = statsInterface.getMonsterHunger(_tokenId);
-        uint256 monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
-        uint256 monsterStatus = statsInterface.getMonsterStatus(_tokenId);
-        require(
-            monsterInterface.ownerOf(_tokenId) == _user,
-            "It's not your monster"
-        );
-        require(
-            startBeginnerIfPassed(monsterHunger, monsterCooldown, monsterStatus)
-        );
-        statsInterface.setStatus(_tokenId, 1);
-        monstersOnBeginner[_user].push(_tokenId);
-        monstersOnBeginnerDetails[_user][_tokenId] = Details(
-            _tokenId,
-            block.timestamp,
-            _user
-        );
-    }
-
-    function intermediateMission(uint256 _tokenId, address _user) external {
-        uint256 monsterLevel = statsInterface.getMonsterLevel(_tokenId);
-        uint256 monsterHunger = statsInterface.getMonsterHunger(_tokenId);
-        uint256 monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
-        uint256 monsterStatus = statsInterface.getMonsterStatus(_tokenId);
-        require(
-            monsterInterface.ownerOf(_tokenId) == _user,
-            "It's not your monster"
-        );
-        require(
-            startIntermediateIfPassed(
-                monsterHunger,
-                monsterCooldown,
-                monsterStatus,
-                monsterLevel
-            )
-        );
-        statsInterface.setStatus(_tokenId, 1);
-        monstersOnIntermediate[_user].push(_tokenId);
-        monstersOnIntermediateDetails[_user][_tokenId] = Details(
-            _tokenId,
-            block.timestamp,
-            _user
-        );
-    }
-
-    function deleteMonsterOnBeg(uint256 _tokenId, address _user) internal {
-        uint256 index;
-        uint256[] storage monsters = monstersOnBeginner[_user];
-        uint256 monstersLength = monsters.length;
-        Details storage details = monstersOnBeginnerDetails[_user][_tokenId];
-
-        delete details.tokenId;
-        delete details.missionStart;
-        delete details.owner;
-
-        for (uint256 i; i < monstersLength; ++i) {
-            uint256 monster = monsters[i];
-            if (monster == _tokenId) {
-                index = i;
-            }
+    function beginnerMission(uint256[] calldata _monsters, address _user)
+        external
+        notOnMission(_user)
+    {
+        require(_monsters.length <= 6, "Exceed limit");
+        for (uint256 i; i < _monsters.length; ++i) {
+            uint256 monsterHunger = statsInterface.getMonsterHunger(
+                _monsters[i]
+            );
+            uint256 monsterCooldown = statsInterface.getMonsterCooldown(
+                _monsters[i]
+            );
+            uint256 monsterStatus = statsInterface.getMonsterStatus(
+                _monsters[i]
+            );
+            require(
+                monsterInterface.ownerOf(_monsters[i]) == _user,
+                "It's not your monster"
+            );
+            require(
+                startBeginnerIfPassed(
+                    monsterHunger,
+                    monsterCooldown,
+                    monsterStatus
+                )
+            );
+            statsInterface.setStatus(_monsters[i], 1);
+            monstersOnBeginnerDetails[_user][_monsters[i]] = Details(
+                _monsters[i],
+                block.timestamp,
+                _user
+            );
         }
-
-        monsters[index] = monsters[monstersLength - 1];
-        monsters.pop();
+        monstersOnBeginner[_user] = _monsters;
     }
 
-    function deleteMonsterOnInt(address _user, uint256 _tokenId) internal {
-        uint256 index;
-        uint256[] storage monsters = monstersOnIntermediate[_user];
-        uint256 monstersLength = monsters.length;
-        Details storage details = monstersOnIntermediateDetails[_user][
-            _tokenId
-        ];
-
-        delete details.tokenId;
-        delete details.missionStart;
-        delete details.owner;
-
-        for (uint256 i; i < monstersLength; ++i) {
-            uint256 monster = monsters[i];
-            if (monster == _tokenId) {
-                index = i;
-            }
+    function intermediateMission(uint256[] calldata _monsters, address _user)
+        external
+        notOnMission(_user)
+    {
+        require(_monsters.length <= 6, "Exceed limit");
+        for (uint256 i; i < _monsters.length; ++i) {
+            uint256 monsterLevel = statsInterface.getMonsterLevel(_monsters[i]);
+            uint256 monsterHunger = statsInterface.getMonsterHunger(
+                _monsters[i]
+            );
+            uint256 monsterCooldown = statsInterface.getMonsterCooldown(
+                _monsters[i]
+            );
+            uint256 monsterStatus = statsInterface.getMonsterStatus(
+                _monsters[i]
+            );
+            require(
+                monsterInterface.ownerOf(_monsters[i]) == _user,
+                "It's not your monster"
+            );
+            require(
+                startIntermediateIfPassed(
+                    monsterHunger,
+                    monsterCooldown,
+                    monsterStatus,
+                    monsterLevel
+                )
+            );
+            statsInterface.setStatus(_monsters[i], 1);
+            monstersOnIntermediateDetails[_user][_monsters[i]] = Details(
+                _monsters[i],
+                block.timestamp,
+                _user
+            );
         }
+        monstersOnIntermediate[_user] = _monsters;
+    }
 
-        monsters[index] = monsters[monstersLength - 1];
-        monsters.pop();
+    function deleteMonsterOnBeg(address _user) internal {
+        uint256[] memory monsters = monstersOnBeginner[_user];
+        uint256 length = monsters.length;
+        for (uint256 i; i < length; ++i) {
+            uint256 monster = monsters[i];
+            Details memory details = monstersOnBeginnerDetails[_user][monster];
+            delete details;
+        }
+        delete monsters;
+    }
+
+    function deleteMonsterOnInt(address _user) internal {
+        uint256[] memory monsters = monstersOnIntermediate[_user];
+        uint256 length = monsters.length;
+        for (uint256 i; i < length; ++i) {
+            uint256 monster = monsters[i];
+            Details memory details = monstersOnIntermediateDetails[_user][
+                monster
+            ];
+            delete details;
+        }
+        delete monsters;
     }
 
     function getMonstersOnBeginner(address _user)
