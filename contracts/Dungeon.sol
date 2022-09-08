@@ -28,101 +28,67 @@ contract Dungeon {
         itemInterface = IItems(itemNFT);
     }
 
-    function bossFight(uint256 _tokenId, address _user) external {
-        require(
-            monsterInterface.ownerOf(_tokenId) == _user,
-            "It's not your monster"
-        );
-
-        uint256 monsterLevel = statsInterface.getMonsterLevel(_tokenId);
-        uint256 monsterStatus = statsInterface.getMonsterStatus(_tokenId);
-        uint256 monsterHunger = statsInterface.getMonsterHunger(_tokenId);
-        uint256 monsterCooldown = statsInterface.getMonsterCooldown(_tokenId);
-
-        require(monsterStatus == 0, "Your monster still working on something");
-        require(
-            monsterCooldown <= block.timestamp,
-            " Your monster still on cooldown"
-        );
-        require(monsterHunger >= 20, "Not enough hunger");
-
-        statsInterface.setStatus(_tokenId, 3);
-        monstersOnBoss[_user].push(_tokenId);
-        monstersOnBossDetails[_user][_tokenId] = Details(
-            _tokenId,
-            block.timestamp,
-            msg.sender
-        );
-    }
-
-    function claimBossFight(uint256 _tokenId, address _user)
-        external
-        isOnBoss(_tokenId, _user)
-    {
-        uint256 hunger = statsInterface.getMonsterHunger(_tokenId);
-        uint256 newHunger = hunger - 20;
-        uint256 expEarned = 8;
-        uint256 level = statsInterface.getMonsterLevel(_tokenId);
-        statsInterface.setCooldown(_tokenId);
-        statsInterface.setHunger(_tokenId, newHunger);
-        statsInterface.expUp(_tokenId, expEarned);
-        if (level == 1) {
-            itemInterface.bossFightReward(
-                _user,
-                randomNumber(),
-                bossFightChance(30)
+    function bossFight(uint256[] calldata _monsters, address _user) external {
+        require(_monsters.length <= 6, "Exceed Limit");
+        for (uint256 i; i < _monsters.length; ++i) {
+            uint256 monster = _monsters[i];
+            uint256 monsterLevel = statsInterface.getMonsterLevel(monster);
+            uint256 monsterStatus = statsInterface.getMonsterStatus(monster);
+            uint256 monsterHunger = statsInterface.getMonsterHunger(monster);
+            uint256 monsterCooldown = statsInterface.getMonsterCooldown(
+                monster
             );
-        } else if (level == 2) {
-            itemInterface.bossFightReward(
-                _user,
-                randomNumber(),
-                bossFightChance(60)
+            require(
+                monsterStatus == 0,
+                "Your monster still working on something"
             );
-        } else {
-            itemInterface.bossFightReward(
-                _user,
-                randomNumber(),
-                bossFightChance(90)
+            require(
+                monsterCooldown <= block.timestamp,
+                " Your monster still on cooldown"
+            );
+            require(monsterHunger >= 20, "Not enough hunger");
+            statsInterface.setStatus(monster, 3);
+            monstersOnBossDetails[_user][monster] = Details(
+                monster,
+                block.timestamp,
+                msg.sender
             );
         }
-        statsInterface.setStatus(_tokenId, 0);
-        deleteMonsterOnBoss(_tokenId, _user);
+        monstersOnBoss[_user] = _monsters;
     }
 
-    modifier isOnBoss(uint256 _tokenId, address _user) {
-        bool result;
+    function claimBossFight(address _user) external {
         uint256[] memory monsters = monstersOnBoss[_user];
         for (uint256 i; i < monsters.length; ++i) {
             uint256 monster = monsters[i];
-            if (_tokenId == monster) {
-                result = true;
-            }
+            uint256 hunger = statsInterface.getMonsterHunger(monster);
+            uint256 newHunger = hunger - 20;
+            uint256 expEarned = 8;
+            uint256 level = statsInterface.getMonsterLevel(monster);
+            uint256 odds = bossFightChance(level * 30);
+            statsInterface.setCooldown(monster);
+            statsInterface.setHunger(monster, newHunger);
+            statsInterface.expUp(monster, expEarned);
+            itemInterface.bossFightReward(monster, _user, randomNumber(), odds);
+            statsInterface.setStatus(monster, 0);
         }
-        require(result, "Monster Not Found");
-        _;
+
+        deleteMonsterOnBoss(_user);
     }
 
-    function deleteMonsterOnBoss(uint256 _tokenId, address _user) internal {
-        uint256 index;
-        uint256[] storage monsters = monstersOnBoss[_user];
-        Details storage details = monstersOnBossDetails[_user][_tokenId];
-        uint256 monstersLength = monsters.length;
-
-        delete details.owner;
-        delete details.startTime;
-        delete details.tokenId;
-
-        for (uint256 i; i < monstersLength; ++i) {
+    function deleteMonsterOnBoss(address _user) internal {
+        uint256[] memory monsters = monstersOnBoss[_user];
+        for (uint256 i; i < monsters.length; ++i) {
             uint256 monster = monsters[i];
-            if (monster == _tokenId) {
-                index = i;
-            }
+            Details memory details = monstersOnBossDetails[_user][monster];
+            delete details.owner;
+            delete details.startTime;
+            delete details.tokenId;
         }
-        monsters[index] = monsters[monstersLength - 1];
-        monsters.pop();
+        delete monsters;
     }
 
-    function getMyMonsters(address _user)
+    function getMonstersOnDungeon(address _user)
         external
         view
         returns (Details[] memory)
