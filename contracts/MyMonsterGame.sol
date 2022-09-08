@@ -62,7 +62,11 @@ contract MonsterGame is IERC721Receiver {
             statsInterface.setHunger(monster, newHunger);
             statsInterface.expUp(monster, expEarned);
             statsInterface.setStatus(monster, 0);
-            itemsInterface.beginnerMissionReward(_user, randomNumber());
+            itemsInterface.beginnerMissionReward(
+                monster,
+                _user,
+                randomNumber()
+            );
         }
         deleteMonsterOnBeg(_user);
     }
@@ -89,7 +93,11 @@ contract MonsterGame is IERC721Receiver {
             statsInterface.setHunger(monster, newHunger);
             statsInterface.expUp(monster, expEarned);
             statsInterface.setStatus(monster, 0);
-            itemsInterface.intermediateMissionReward(_user, randomNumber());
+            itemsInterface.intermediateMissionReward(
+                monster,
+                _user,
+                randomNumber()
+            );
         }
         deleteMonsterOnInt(_user);
     }
