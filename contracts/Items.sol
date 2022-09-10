@@ -2,13 +2,10 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "./IMonsterGame.sol";
 import "./IMonster.sol";
 
 contract Items is ERC1155 {
-    IMonsterGame gameInterface;
-    IMonster monsterInterface;
-
+    IMonster private monsterInterface;
     uint256 internal constant M_COINS = 0;
     uint256 internal constant BERRY = 1;
     uint256 internal constant HUNGER_POTION = 2;
@@ -75,7 +72,6 @@ contract Items is ERC1155 {
     );
 
     function setInterface(address _monsterGame, address _monsterNFT) external {
-        gameInterface = IMonsterGame(_monsterGame);
         monsterInterface = IMonster(_monsterNFT);
     }
 
@@ -116,11 +112,24 @@ contract Items is ERC1155 {
         }
     }
 
-    function beginnerMissionReward(
+    function missionsReward(
+        uint256 _mission,
         uint256 _monster,
         address _user,
         uint256 _odds
     ) external {
+        if (_mission != 2) {
+            beginnerMissionReward(_monster, _user, _odds);
+        }
+
+        intermediateMissionReward(_monster, _user, _odds);
+    }
+
+    function beginnerMissionReward(
+        uint256 _monster,
+        address _user,
+        uint256 _odds
+    ) internal {
         if (_odds <= 60 && 0 <= _odds) {
             uint256[] memory itemsSetOne = itemSet[0];
             uint256[] memory quantitiesSetOne = itemRateSet[0];
@@ -147,7 +156,7 @@ contract Items is ERC1155 {
         uint256 _monster,
         address _user,
         uint256 _odds
-    ) external {
+    ) internal {
         if (_odds <= 60 && 0 <= _odds) {
             uint256[] memory itemsSetFour = itemSet[3];
             uint256[] memory quantitiesSetFour = itemRateSet[3];
