@@ -4,13 +4,8 @@ pragma solidity >=0.8.0 <0.9.0;
 import "./Items.sol";
 
 interface IItems {
-    function beginnerMissionReward(
-        uint256 _monster,
-        address _user,
-        uint256 _odds
-    ) external;
-
-    function intermediateMissionReward(
+    function missionsReward(
+        uint256 _mission,
         uint256 _monster,
         address _user,
         uint256 _odds
