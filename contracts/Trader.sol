@@ -3,7 +3,6 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "./IItems.sol";
-import "./IMonsterGame.sol";
 
 contract Trader is ERC1155Holder {
     struct Shop {
@@ -21,7 +20,6 @@ contract Trader is ERC1155Holder {
     }
 
     IItems itemInterface;
-    IMonsterGame monsterGameInterface;
     IERC1155 public itemNftInterface;
 
     address OWNER;
@@ -44,12 +42,8 @@ contract Trader is ERC1155Holder {
         _;
     }
 
-    function setInterface(address _items, address _monsterGame)
-        public
-        onlyOwner
-    {
+    function setInterface(address _items) public onlyOwner {
         itemInterface = IItems(_items);
-        monsterGameInterface = IMonsterGame(_monsterGame);
         itemNftInterface = IERC1155(_items);
     }
 
