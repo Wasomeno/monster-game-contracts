@@ -7,7 +7,7 @@ import "./IItems.sol";
 
 contract Dungeon {
     struct Details {
-        uint256 tokenId;
+        uint256[] monsters;
         uint256 startTime;
         address owner;
     }
@@ -17,10 +17,20 @@ contract Dungeon {
     IItems itemInterface;
 
     uint256 nonce;
+    mapping(address => Details) public monstersOnDungeon;
+    mapping(address => bool) public dungeoningStatus;
 
-    mapping(address => uint256[]) public monstersOnBoss;
-    mapping(address => mapping(uint256 => Details))
-        public monstersOnBossDetails;
+    modifier isDungeoning(address _user) {
+        bool status = dungeoningStatus[_user];
+        require(status, "You're not dungeoning");
+        _;
+    }
+
+    modifier isNotDungeoning(address _user) {
+        bool status = dungeoningStatus[_user];
+        require(!status, "You're still dungeoning");
+        _;
+    }
 
     function setInterface(address monsterNFT, address itemNFT) public {
         monsterInterface = IERC721(monsterNFT);
@@ -28,37 +38,30 @@ contract Dungeon {
         itemInterface = IItems(itemNFT);
     }
 
-    function bossFight(uint256[] calldata _monsters, address _user) external {
+    function startDungeon(uint256[] calldata _monsters, address _user)
+        external
+        isNotDungeoning(_user)
+    {
         require(_monsters.length <= 6, "Exceed Limit");
         for (uint256 i; i < _monsters.length; ++i) {
             uint256 monster = _monsters[i];
-            uint256 monsterLevel = statsInterface.getMonsterLevel(monster);
-            uint256 monsterStatus = statsInterface.getMonsterStatus(monster);
-            uint256 monsterHunger = statsInterface.getMonsterHunger(monster);
-            uint256 monsterCooldown = statsInterface.getMonsterCooldown(
-                monster
-            );
+            uint256 level = statsInterface.getMonsterLevel(monster);
+            uint256 status = statsInterface.getMonsterStatus(monster);
+            uint256 hunger = statsInterface.getMonsterHunger(monster);
+            uint256 cooldown = statsInterface.getMonsterCooldown(monster);
             require(
-                monsterStatus == 0,
-                "Your monster still working on something"
+                cooldown <= block.timestamp,
+                " Your monster is on cooldown"
             );
-            require(
-                monsterCooldown <= block.timestamp,
-                " Your monster still on cooldown"
-            );
-            require(monsterHunger >= 20, "Not enough hunger");
+            require(status == 0, "Your monster is active");
+            require(hunger >= 20, "Not enough hunger");
             statsInterface.setStatus(monster, 3);
-            monstersOnBossDetails[_user][monster] = Details(
-                monster,
-                block.timestamp,
-                msg.sender
-            );
         }
-        monstersOnBoss[_user] = _monsters;
+        monstersOnDungeon[_user] = Details(_monsters, block.timestamp, _user);
     }
 
-    function claimBossFight(address _user) external {
-        uint256[] memory monsters = monstersOnBoss[_user];
+    function finishDungeon(address _user) external isDungeoning(_user) {
+        uint256[] memory monsters = monstersOnDungeon[_user].monsters;
         for (uint256 i; i < monsters.length; ++i) {
             uint256 monster = monsters[i];
             uint256 hunger = statsInterface.getMonsterHunger(monster);
@@ -72,34 +75,20 @@ contract Dungeon {
             itemInterface.bossFightReward(monster, _user, randomNumber(), odds);
             statsInterface.setStatus(monster, 0);
         }
-
-        deleteMonsterOnBoss(_user);
+        deleteUserDetails(_user);
     }
 
-    function deleteMonsterOnBoss(address _user) internal {
-        uint256[] memory monsters = monstersOnBoss[_user];
-        for (uint256 i; i < monsters.length; ++i) {
-            uint256 monster = monsters[i];
-            Details memory details = monstersOnBossDetails[_user][monster];
-            delete details.owner;
-            delete details.startTime;
-            delete details.tokenId;
-        }
-        delete monsters;
+    function deleteUserDetails(address _user) internal {
+        Details memory details = monstersOnDungeon[_user];
+        delete details;
     }
 
     function getMonstersOnDungeon(address _user)
         external
         view
-        returns (Details[] memory)
+        returns (uint256[] memory _monsters)
     {
-        uint256[] memory monsters = monstersOnBoss[_user];
-        Details[] memory monstersDetails = new Details[](monsters.length);
-        for (uint256 i; i < monsters.length; ++i) {
-            uint256 monsterId = monsters[i];
-            monstersDetails[i] = monstersOnBossDetails[_user][monsterId];
-        }
-        return monstersDetails;
+        _monsters = monstersOnDungeon[_user].monsters;
     }
 
     function randomNumber() internal returns (uint256) {
