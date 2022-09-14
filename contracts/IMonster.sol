@@ -1,32 +1,45 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.0 <0.9.0;
 
-import "./MonstersNFT.sol";
-
 interface IMonster {
-
     struct Stats {
-        uint level;
-        uint hunger;
-        uint exp;
-        uint expCap;
-        uint cooldown;
-        uint status; 
+        uint256 id;
+        uint256 level;
+        uint256 energy;
+        uint256 exp;
+        uint256 expCap;
+        uint256 cooldown;
+        uint256 status;
     }
 
-    function levelUp(uint _tokenId) external;
-    function expUp(uint _tokenId, uint _amount) external;
-    function setHunger(uint _tokenId, uint _hunger) external;
-    function setCooldown(uint _tokenId) external;
-    function setStatus(uint _tokenId, uint _status) external;
-    function getMonsterExp(uint _tokenId) external view returns(uint);
-    function getMonsterLevel(uint _tokenId) external view returns(uint); 
-    function getMonsterExpCap(uint _tokenId) external view returns(uint); 
-    function getMonsterHunger(uint _tokenId) external view returns(uint);
-    function getMonsterCooldown(uint _tokenId) external view returns(uint);
-    function getMonsterStatus(uint _tokenId) external view returns(uint);
-    function resetMissionStart(uint _tokenId) external;
-    function feedMonster(uint _tokenId, uint _amount) external;
+    function levelUp(uint256 _tokenId) external;
 
+    function expUp(uint256 _tokenId, uint256 _amount) external;
 
+    function setEnergy(uint256 _tokenId, uint256 _energy) external;
+
+    function setCooldown(uint256 _tokenId) external;
+
+    function setStatus(uint256 _tokenId, uint256 _status) external;
+
+    function getMonsterExp(uint256 _tokenId) external view returns (uint256);
+
+    function getMonsterLevel(uint256 _tokenId) external view returns (uint256);
+
+    function getMonsterExpCap(uint256 _tokenId) external view returns (uint256);
+
+    function getMonsterEnergy(uint256 _tokenId) external view returns (uint256);
+
+    function getMonsterCooldown(uint256 _tokenId)
+        external
+        view
+        returns (uint256);
+
+    function getMonsterStatus(uint256 _tokenId) external view returns (uint256);
+
+    function resetMissionStart(uint256 _tokenId) external;
+
+    function feedMonster(uint256 _tokenId, uint256 _amount) external;
+
+    function ownerOf(uint256 _monster) external view returns (address owner);
 }

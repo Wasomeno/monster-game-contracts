@@ -41,10 +41,10 @@ contract Nursery {
         require(_monsters.length <= 6, "Exceed Limit");
         for (uint256 i; i < _monsters.length; ++i) {
             uint256 monster = _monsters[i];
-            uint256 hunger = monsterInterface.getMonsterHunger(monster);
+            uint256 energy = monsterInterface.getMonsterEnergy(monster);
             uint256 status = monsterInterface.getMonsterStatus(monster);
             require(status == 0, "Your monster still working on something");
-            require(_duration * 10 + hunger <= 100, "Reduce the duration");
+            require(_duration * 10 + energy <= 100, "Reduce the duration");
             require(msg.value >= _duration * 0.0001 ether, "Wrong value sent");
             monsterInterface.setStatus(monster, 2);
             monstersOnNursery[_user][monster] = Rest(
@@ -63,15 +63,15 @@ contract Nursery {
             uint256 monster = monsters[i];
             Rest memory monsterDetails = monstersOnNursery[_user][monster];
             uint256 startTime = monsterDetails.startTime;
-            uint256 hunger = monsterInterface.getMonsterHunger(monster);
+            uint256 energy = monsterInterface.getMonsterEnergy(monster);
             uint256 duration = monsterDetails.duration;
-            uint256 newHunger = duration * 10;
+            uint256 newEnergy = duration * 10;
             uint256 timeElapsed = startTime + duration;
             require(
                 timeElapsed <= block.timestamp,
                 "Your monster still resting"
             );
-            monsterInterface.feedMonster(monster, newHunger);
+            monsterInterface.feedMonster(monster, newEnergy);
             monsterInterface.setStatus(monster, 0);
         }
         deleteMonster(_user);

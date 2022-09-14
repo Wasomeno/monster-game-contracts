@@ -8,7 +8,7 @@ contract Monsters is ERC721, Ownable {
     struct Stats {
         uint256 id;
         uint256 level;
-        uint256 hunger;
+        uint256 energy;
         uint256 exp;
         uint256 expCap;
         uint256 cooldown;
@@ -90,9 +90,9 @@ contract Monsters is ERC721, Ownable {
         }
     }
 
-    function setHunger(uint256 _tokenId, uint256 _hunger) external {
+    function setEnergy(uint256 _tokenId, uint256 _energy) external {
         Stats storage monster = monsterStats[_tokenId];
-        monster.hunger = _hunger;
+        monster.energy = _energy;
     }
 
     function setCooldown(uint256 _tokenId) external {
@@ -124,13 +124,13 @@ contract Monsters is ERC721, Ownable {
         return monsterExpCap;
     }
 
-    function getMonsterHunger(uint256 _tokenId)
+    function getMonsterEnergy(uint256 _tokenId)
         external
         view
         returns (uint256)
     {
-        uint256 monsterHunger = monsterStats[_tokenId].hunger;
-        return monsterHunger;
+        uint256 monsterEnergy = monsterStats[_tokenId].energy;
+        return monsterEnergy;
     }
 
     function getMonsterCooldown(uint256 _tokenId)
@@ -148,10 +148,10 @@ contract Monsters is ERC721, Ownable {
     }
 
     function feedMonster(uint256 _tokenId, uint256 _amount) external {
-        uint256 hunger = monsterStats[_tokenId].hunger;
-        require(hunger + _amount < 100, "Too much food");
+        uint256 energy = monsterStats[_tokenId].energy;
+        require(energy + _amount < 100, "Too much food");
         Stats storage monster = monsterStats[_tokenId];
-        monster.hunger = hunger + _amount;
+        monster.energy = energy + _amount;
     }
 
     function _baseURI() internal view virtual override returns (string memory) {
@@ -160,6 +160,15 @@ contract Monsters is ERC721, Ownable {
 
     function setBaseURI(string memory baseURI) public onlyOwner {
         _baseTokenURI = baseURI;
+    }
+
+    function ownerOf(uint256 _monster)
+        public
+        view
+        override
+        returns (address owner)
+    {
+        owner = ownerOf(_monster);
     }
 
     receive() external payable {}
