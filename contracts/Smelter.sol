@@ -16,6 +16,8 @@ contract Smelter is ERC1155Holder {
     mapping(address => Details) public smeltDetails;
     mapping(address => bool) public smeltingStatus;
 
+    event Smelt(uint256 _quantity, uint256 _startTime);
+
     modifier isSmelting(address _user) {
         bool status = smeltingStatus[_user];
         require(status, "You're not smelting any crystals");
@@ -42,6 +44,7 @@ contract Smelter is ERC1155Holder {
         require(_quantity >= 100, "Max quantity exceed");
         itemInterface.safeTransferFrom(_user, address(this), 4, _quantity, "");
         smeltDetails[_user] = Details(_quantity, block.timestamp);
+        emit Smelt(_quantity, block.timestamp);
     }
 
     function finishSmelting(address _user) external isSmelting(_user) {
