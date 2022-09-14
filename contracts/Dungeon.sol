@@ -47,14 +47,14 @@ contract Dungeon {
             uint256 monster = _monsters[i];
             uint256 level = statsInterface.getMonsterLevel(monster);
             uint256 status = statsInterface.getMonsterStatus(monster);
-            uint256 hunger = statsInterface.getMonsterHunger(monster);
+            uint256 energy = statsInterface.getMonsterEnergy(monster);
             uint256 cooldown = statsInterface.getMonsterCooldown(monster);
             require(
                 cooldown <= block.timestamp,
                 " Your monster is on cooldown"
             );
             require(status == 0, "Your monster is active");
-            require(hunger >= 20, "Not enough hunger");
+            require(energy >= 20, "Not enough energy");
             statsInterface.setStatus(monster, 3);
         }
         monstersOnDungeon[_user] = Details(_monsters, block.timestamp, _user);
@@ -64,13 +64,13 @@ contract Dungeon {
         uint256[] memory monsters = monstersOnDungeon[_user].monsters;
         for (uint256 i; i < monsters.length; ++i) {
             uint256 monster = monsters[i];
-            uint256 hunger = statsInterface.getMonsterHunger(monster);
-            uint256 newHunger = hunger - 20;
+            uint256 energy = statsInterface.getMonsterEnergy(monster);
+            uint256 newEnergy = energy - 20;
             uint256 expEarned = 8;
             uint256 level = statsInterface.getMonsterLevel(monster);
             uint256 odds = bossFightChance(level * 30);
             statsInterface.setCooldown(monster);
-            statsInterface.setHunger(monster, newHunger);
+            statsInterface.setEnergy(monster, newEnergy);
             statsInterface.expUp(monster, expEarned);
             itemInterface.bossFightReward(monster, _user, randomNumber(), odds);
             statsInterface.setStatus(monster, 0);
