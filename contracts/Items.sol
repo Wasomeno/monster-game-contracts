@@ -8,8 +8,8 @@ contract Items is ERC1155 {
     IMonster private monsterInterface;
     uint256 internal constant M_COINS = 0;
     uint256 internal constant BERRY = 1;
-    uint256 internal constant HUNGER_POTION = 2;
-    uint256 internal constant EXP_BOTTLE = 3;
+    uint256 internal constant ENERGY_POTION = 2;
+    uint256 internal constant EXP_POTION = 3;
     uint256 internal constant TOKEN_CRYSTAL = 4;
 
     uint256[] internal items;
@@ -75,7 +75,7 @@ contract Items is ERC1155 {
         monsterInterface = IMonster(_monsterNFT);
     }
 
-    function addNewItems(uint256[] memory _items) public {
+    function addNewItems(uint256[] memory _items) external {
         for (uint256 i; i < _items.length; ++i) {
             items.push(_items[i]);
         }
@@ -123,6 +123,57 @@ contract Items is ERC1155 {
         }
 
         intermediateMissionReward(_monster, _user, _odds);
+    }
+
+    function bossFightReward(
+        uint256 _monster,
+        address _user,
+        uint256 _odds,
+        uint256 _chance
+    ) external {
+        if (_odds < _chance) {
+            uint256[] memory bossItemsSetOne = bossRewardSet[0];
+            uint256[] memory bossQuantitiesSetOne = bossRateSet[0];
+            _mintBatch(_user, bossItemsSetOne, bossQuantitiesSetOne, "");
+            emit BossFightReward(
+                _monster,
+                bossItemsSetOne,
+                bossQuantitiesSetOne
+            );
+        } else {
+            uint256[] memory bossItemsSetTwo = bossRewardSet[1];
+            uint256[] memory bossQuantitiesSetTwo = bossRateSet[1];
+            _mintBatch(_user, bossItemsSetTwo, bossQuantitiesSetTwo, "");
+            emit BossFightReward(
+                _monster,
+                bossItemsSetTwo,
+                bossQuantitiesSetTwo
+            );
+        }
+    }
+
+    function setApprovalAll(address _operator, bool _approved) external {
+        setApprovalForAll(_operator, _approved);
+    }
+
+    function getInventory(address _user)
+        external
+        view
+        returns (uint256[] memory inventory)
+    {
+        uint256 length = items.length;
+        uint256[] memory inventoryTemp = new uint256[](length);
+        for (uint256 i; i < items.length; ++i) {
+            uint256 balance = balanceOf(_user, i);
+            if (balance > 0) {
+                inventoryTemp[i] = (balanceOf(_user, i));
+            }
+        }
+        inventory = inventoryTemp;
+    }
+
+    function getItems() external view returns (uint256[] memory _items) {
+        _items = items;
     }
 
     function beginnerMissionReward(
@@ -185,79 +236,5 @@ contract Items is ERC1155 {
                 quantitiesSetSix
             );
         }
-    }
-
-    function bossFightReward(
-        uint256 _monster,
-        address _user,
-        uint256 _odds,
-        uint256 _chance
-    ) external {
-        if (_odds < _chance) {
-            uint256[] memory bossItemsSetOne = bossRewardSet[0];
-            uint256[] memory bossQuantitiesSetOne = bossRateSet[0];
-            _mintBatch(_user, bossItemsSetOne, bossQuantitiesSetOne, "");
-            emit BossFightReward(
-                _monster,
-                bossItemsSetOne,
-                bossQuantitiesSetOne
-            );
-        } else {
-            uint256[] memory bossItemsSetTwo = bossRewardSet[1];
-            uint256[] memory bossQuantitiesSetTwo = bossRateSet[1];
-            _mintBatch(_user, bossItemsSetTwo, bossQuantitiesSetTwo, "");
-            emit BossFightReward(
-                _monster,
-                bossItemsSetTwo,
-                bossQuantitiesSetTwo
-            );
-        }
-    }
-
-    function useHungerPotion(
-        address _user,
-        uint256 _tokenId,
-        uint256 _amount
-    ) external {
-        uint256 balance = balanceOf(_user, HUNGER_POTION);
-        uint256 hunger = monsterInterface.getMonsterHunger(_tokenId);
-        uint256 newHunger = hunger + 10;
-        require(balance > _amount, "Not enough items");
-        require(newHunger <= 100, "Too much hunger");
-        safeTransferFrom(_user, address(this), HUNGER_POTION, _amount, "");
-        monsterInterface.setHunger(_tokenId, newHunger);
-    }
-
-    function useExpBottle(
-        address _user,
-        uint256 _tokenId,
-        uint256 _amount
-    ) external {
-        uint256 balance = balanceOf(_user, EXP_BOTTLE);
-        uint256 exp = monsterInterface.getMonsterExp(_tokenId);
-        uint256 newExp = exp + 3;
-        require(balance >= _amount, "Not enough items");
-        safeTransferFrom(_user, address(this), EXP_BOTTLE, _amount, "");
-        monsterInterface.expUp(_tokenId, 3);
-    }
-
-    function getInventory(address _user)
-        external
-        view
-        returns (uint256[] memory inventory)
-    {
-        uint256 length = items.length;
-        uint256[] memory inventoryTemp = new uint256[](length);
-        for (uint256 i; i < items.length; ++i) {
-            uint256 balance = balanceOf(_user, i);
-            if (balance > 0) {
-                inventoryTemp[i] = (balanceOf(_user, i));
-            }
-        }
-        inventory = inventoryTemp;
-    }
-
-    function getItems() external view returns (uint256[] memory _items) {
-        _items = items;
     }
 }
