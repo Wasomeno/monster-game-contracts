@@ -37,9 +37,5 @@ interface IMonster {
 
     function getMonsterStatus(uint256 _tokenId) external view returns (uint256);
 
-    function resetMissionStart(uint256 _tokenId) external;
-
-    function feedMonster(uint256 _tokenId, uint256 _amount) external;
-
-    function ownerOf(uint256 _monster) external view returns (address owner);
+    function ownerOf(uint256 _monster) external view returns (address _owner);
 }
