@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.0 <0.9.0;
 
-import "./Items.sol";
-
 interface IItems {
     function missionsReward(
         uint256 _mission,
@@ -29,9 +27,4 @@ interface IItems {
         uint256 _id,
         uint256 _quantity
     ) external;
-
-    function getInventory(address _user)
-        external
-        view
-        returns (uint256[] memory inventory);
 }
