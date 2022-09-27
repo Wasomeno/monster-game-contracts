@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity >=0.8.4;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "./IMonster.sol";
 import "./IItems.sol";
 import "./IUsersData.sol";
 
-contract MonsterGame is IERC721Receiver {
+contract MonsterGame is ERC1155Holder {
     IMonster public monstersInterface;
     IItems public itemsInterface;
     IUsersData public usersDataInterface;
@@ -15,7 +15,8 @@ contract MonsterGame is IERC721Receiver {
 
     struct UserDetails {
         uint256 mission;
-        uint256[] monsters;
+        uint256 monstersAmount;
+        mapping(uint256 => uint256) monsters;
         uint256 startTime;
         address owner;
     }
@@ -25,23 +26,77 @@ contract MonsterGame is IERC721Receiver {
         uint256 exp;
     }
 
-    uint256 nonce;
-    uint256 BEGINNER_MISSION_ID = 1;
-    uint256 INTERMEDIATE_MISSION_ID = 2;
+    uint256 internal nonce;
+    uint256 constant BEGINNER_MISSION_ID = 1;
+    uint256 constant INTERMEDIATE_MISSION_ID = 2;
+    uint256 constant FEEDING_FEE = 0.0001 ether;
 
     mapping(address => UserDetails) public monstersOnMissions;
     mapping(address => bool) public missioningStatus;
     mapping(uint256 => MissionDetails) public missionDetails;
 
-    function setInterface(
-        address monsterNFT,
-        address itemNFT,
-        address usersData
-    ) public {
-        monstersInterface = IMonster(monsterNFT);
-        itemsInterface = IItems(itemNFT);
-        erc1155Interface = IERC1155(itemNFT);
-        usersDataInterface = IUsersData(usersData);
+    constructor() {
+        missionDetails[1] = MissionDetails(10, 5);
+        missionDetails[2] = MissionDetails(20, 10);
+    }
+
+    receive() external payable {}
+
+    error NotRegistered(address _user, bool _result);
+    error NotOnMission(address _user, bool _result);
+    error IsOnMission(address _user, bool _result);
+    error IsActive(uint256 _monster, uint256 _status);
+    error NotValidToFeed(uint256 _monster, uint256 _energy, uint256 _amount);
+    error NotValidToIntermediate(uint256 _monster, uint256 _level);
+    error NotValidToMission(uint256 _monster, uint256 _energy, uint256 _status);
+    error NotValidToFinishMission(uint256 _elapsedTime);
+    error NotValidToUsePotion();
+
+    modifier isOnMission(address _user) {
+        bool status = missioningStatus[_user];
+        if (!status) {
+            revert NotOnMission(_user, status);
+        }
+        _;
+    }
+
+    modifier isNotOnMission(address _user) {
+        bool status = missioningStatus[_user];
+        if (status) {
+            revert IsOnMission(_user, status);
+        }
+        _;
+    }
+
+    modifier isNotActive(uint256 _monster) {
+        uint256 status = monstersInterface.getMonsterStatus(_monster);
+        if (status != 0) {
+            revert IsActive(_monster, status);
+        }
+        _;
+    }
+
+    modifier isValid(address _user) {
+        bool result = usersDataInterface.checkRegister(_user);
+        if (!result) {
+            revert NotRegistered(_user, result);
+        }
+        _;
+    }
+
+    modifier isValidToFeed(uint256 _monster, uint256 _amount) {
+        uint256 monsterLevel = monstersInterface.getMonsterLevel(_monster);
+        uint256 total = _amount * FEEDING_FEE * monsterLevel;
+        uint256 monsterEnergy = monstersInterface.getMonsterEnergy(_monster);
+        if (
+            msg.value != total ||
+            monsterEnergy > 100 ||
+            _amount + monsterEnergy > 100 ||
+            _amount == 0
+        ) {
+            revert NotValidToFeed(_monster, monsterEnergy, _amount);
+        }
+        _;
     }
 
     function addMissionDetails(
@@ -52,176 +107,173 @@ contract MonsterGame is IERC721Receiver {
         missionDetails[_mission] = MissionDetails(_energy, _exp);
     }
 
-    modifier isOnMission(address _user) {
-        bool status = missioningStatus[_user];
-        require(status, "You're not on a mission");
-        _;
-    }
-
-    modifier isNotOnMission(address _user) {
-        bool status = missioningStatus[_user];
-        require(!status, "You're on a mission");
-        _;
-    }
-
-    modifier isNotActive(uint256 _monster) {
-        uint256 status = monstersInterface.getMonsterStatus(_monster);
-        require(status == 0, "Your monster is active");
-        _;
-    }
-
-    modifier isValid(address _user) {
-        bool result = usersDataInterface.checkRegister(_user);
-        require(_user == msg.sender, "User not valid");
-        require(result, "You are not registered");
-        _;
-    }
-
-    function finishMission(uint256 _mission, address _user)
+    function startMission(uint256 _mission, uint256[] calldata _monsters)
         external
-        isOnMission(_user)
+        isNotOnMission(msg.sender)
+        isValid(msg.sender)
     {
-        UserDetails memory details = monstersOnMissions[_user];
-        require(_mission == details.mission, "You are not doing this mission");
-        uint256[] memory monsters = details.monsters;
-        uint256 elapsedTime = details.startTime + 30 minutes;
-        require(elapsedTime <= block.timestamp, "Mission is not over");
+        require(_monsters.length <= 6, "Above limit");
+        UserDetails storage details = monstersOnMissions[msg.sender];
+        for (uint256 i; i < _monsters.length; ++i) {
+            uint256 monster = _monsters[i];
+            monsterCheck(msg.sender, _mission, monster);
+            monstersInterface.setStatus(monster, 1);
+            details.monsters[i] = monster;
+        }
+        details.mission = _mission;
+        details.startTime = block.timestamp;
+        details.owner = msg.sender;
+        details.monstersAmount = _monsters.length;
+        missioningStatus[msg.sender] = true;
+    }
+
+    function finishMission() external isOnMission(msg.sender) {
+        UserDetails storage details = monstersOnMissions[msg.sender];
+        uint256 mission = details.mission;
+        MissionDetails memory detailsMission = missionDetails[mission];
+        uint256[] memory monsters = getMonstersOnMission(msg.sender);
+        uint256 startTime = details.startTime;
+        uint256 elapsedTime = startTime + 15 minutes;
+        if (elapsedTime > block.timestamp) {
+            revert NotValidToFinishMission(elapsedTime);
+        }
         for (uint256 i; i < monsters.length; ++i) {
             uint256 monster = monsters[i];
             uint256 energy = monstersInterface.getMonsterEnergy(monster);
-            uint256 energyUsed = missionDetails[_mission].energy;
-            uint256 newEnergy = energy - energyUsed;
-            uint256 expEarned = missionDetails[_mission].exp;
-            monstersInterface.setCooldown(monster);
+            uint256 newEnergy = energy - detailsMission.energy;
             monstersInterface.setEnergy(monster, newEnergy);
-            monstersInterface.expUp(monster, expEarned);
+            monstersInterface.setCooldown(monster);
+            monstersInterface.expUp(monster, detailsMission.exp);
             monstersInterface.setStatus(monster, 0);
             itemsInterface.missionsReward(
-                _mission,
+                mission,
                 monster,
-                _user,
+                msg.sender,
                 randomNumber()
             );
         }
-        deleteMonstersDetails(_user);
+        deleteDetails(msg.sender);
+        missioningStatus[msg.sender] = false;
     }
 
-    function feedIfPassed(
-        uint256 _monsterLevel,
-        uint256 _monsterEnergy,
-        uint256 _amount
-    ) internal view returns (bool result) {
-        uint256 feedingFee = 0.0001 ether;
-        require(
-            msg.value == feedingFee * _monsterLevel * _amount,
-            "Not enough ether"
-        );
-        require(_monsterEnergy < 100, "Your monster energy is full");
-        require(
-            _amount + _monsterEnergy <= 100,
-            "Too much food for your monster"
-        );
-        result = true;
-    }
-
-    function monsterCheck(
-        uint256 _mission,
-        uint256 _monsterEnergy,
-        uint256 _monsterCooldown,
-        uint256 _monsterStatus
-    ) internal view returns (bool result) {
-        uint256 energyUsed = missionDetails[_mission].energy;
-        require(_monsterStatus == 0, "Your monster still working on something");
-        require(
-            _monsterCooldown <= block.timestamp,
-            " Your monster still on cooldown"
-        );
-        require(_monsterEnergy >= energyUsed, "Not enough energy");
-        result = true;
-    }
-
-    function feedMonster(
-        address _user,
-        uint256 _monster,
-        uint256 _amount
-    ) external payable isValid(_user) {
-        uint256 monsterLevel = monstersInterface.getMonsterLevel(_monster);
+    function feedMonster(uint256 _monster, uint256 _amount)
+        external
+        payable
+        isValid(msg.sender)
+        isValidToFeed(_monster, _amount)
+    {
         uint256 monsterEnergy = monstersInterface.getMonsterEnergy(_monster);
-        require(feedIfPassed(monsterLevel, monsterEnergy, _monster));
-        monstersInterface.feedMonster(_monster, _amount);
+        uint256 newMonsterEnergy = monsterEnergy + _amount;
+        monstersInterface.setEnergy(_monster, newMonsterEnergy);
     }
 
-    function startMission(
-        uint256 _mission,
-        uint256[] calldata _monsters,
-        address _user
-    ) external isNotOnMission(_user) {
-        require(_monsters.length <= 6, "Exceed limit");
-        bool isIntermediate = _mission == INTERMEDIATE_MISSION_ID;
-        for (uint256 i; i < _monsters.length; ++i) {
-            uint256 monster = _monsters[i];
-            uint256 level = monstersInterface.getMonsterLevel(monster);
-            uint256 energy = monstersInterface.getMonsterEnergy(monster);
-            uint256 cooldown = monstersInterface.getMonsterCooldown(monster);
-            uint256 status = monstersInterface.getMonsterStatus(monster);
-            address owner = monstersInterface.ownerOf(monster);
-            bool passed = monsterCheck(_mission, energy, cooldown, status);
-            if (isIntermediate) {
-                require(level > 2, "Monster level not enough");
-            }
-            require(owner == _user, "It's not your monster");
-            require(passed, "Monster not passed");
-            monstersInterface.setStatus(monster, 1);
-        }
-        monstersOnMissions[_user] = UserDetails(
-            _mission,
-            _monsters,
-            block.timestamp,
-            _user
-        );
-    }
-
-    function useEnergyPotion(
-        address _user,
-        uint256 _monster,
-        uint256 _amount
-    ) external isNotActive(_monster) isValid(_user) {
-        require(_user == msg.sender, "User not valid");
-        uint256 balance = erc1155Interface.balanceOf(_user, 2);
+    function useEnergyPotion(uint256 _monster, uint256 _amount)
+        external
+        isNotActive(_monster)
+        isValid(msg.sender)
+    {
+        uint256 balance = erc1155Interface.balanceOf(msg.sender, 2);
         uint256 energy = monstersInterface.getMonsterEnergy(_monster);
         uint256 energyGained = _amount * 10;
         uint256 newEnergy = energy + energyGained;
-        require(balance >= _amount, "Not enough items");
-        require(newEnergy <= 100, "Too much energy");
-        erc1155Interface.safeTransferFrom(_user, address(this), 2, _amount, "");
+        if (balance < _amount || newEnergy > 100) {
+            revert NotValidToUsePotion();
+        }
+        erc1155Interface.safeTransferFrom(
+            msg.sender,
+            address(this),
+            2,
+            _amount,
+            ""
+        );
         monstersInterface.setEnergy(_monster, newEnergy);
     }
 
-    function useExpPotion(
-        address _user,
-        uint256 _monster,
-        uint256 _amount
-    ) external isNotActive(_monster) isValid(_user) {
-        require(_user == msg.sender, "User not valid");
-        uint256 balance = erc1155Interface.balanceOf(_user, 3);
-        uint256 exp = monstersInterface.getMonsterExp(_monster);
+    function useExpPotion(uint256 _monster, uint256 _amount)
+        external
+        isNotActive(_monster)
+        isValid(msg.sender)
+    {
+        uint256 balance = erc1155Interface.balanceOf(msg.sender, 3);
         uint256 expEarned = _amount * 3;
-        require(balance >= _amount, "Not enough items");
-        erc1155Interface.safeTransferFrom(_user, address(this), 3, _amount, "");
+        if (balance < _amount) {
+            revert NotValidToUsePotion();
+        }
+        erc1155Interface.safeTransferFrom(
+            msg.sender,
+            address(this),
+            3,
+            _amount,
+            ""
+        );
         monstersInterface.expUp(_monster, expEarned);
     }
 
-    function deleteMonstersDetails(address _user) internal {
-        UserDetails memory details = monstersOnMissions[_user];
-        delete details;
+    function setInterface(
+        address monstersContract,
+        address itemsContract,
+        address usersDataContract
+    ) public {
+        monstersInterface = IMonster(monstersContract);
+        itemsInterface = IItems(itemsContract);
+        erc1155Interface = IERC1155(itemsContract);
+        usersDataInterface = IUsersData(usersDataContract);
     }
 
     function getMonstersOnMission(address _user)
-        external
+        public
         view
         returns (uint256[] memory _monsters)
     {
-        _monsters = monstersOnMissions[_user].monsters;
+        UserDetails storage details = monstersOnMissions[_user];
+        uint256 amount = details.monstersAmount;
+        _monsters = new uint256[](amount);
+        for (uint256 i; i < amount; ++i) {
+            uint256 monster = details.monsters[i];
+            _monsters[i] = monster;
+        }
+    }
+
+    function monsterCheck(
+        address _user,
+        uint256 _mission,
+        uint256 _monster
+    ) internal view returns (bool result) {
+        bool isIntermediate = _mission != BEGINNER_MISSION_ID;
+        uint256 energyUsed = missionDetails[_mission].energy;
+        uint256 level = monstersInterface.getMonsterLevel(_monster);
+        uint256 energy = monstersInterface.getMonsterEnergy(_monster);
+        uint256 cooldown = monstersInterface.getMonsterCooldown(_monster);
+        uint256 status = monstersInterface.getMonsterStatus(_monster);
+        address owner = monstersInterface.ownerOf(_monster);
+        if (isIntermediate && level < 2) {
+            revert NotValidToIntermediate(_monster, level);
+        } else if (
+            owner != _user ||
+            status != 0 ||
+            cooldown > block.timestamp ||
+            energy < energyUsed
+        ) {
+            revert NotValidToMission(_monster, energy, status);
+        }
+        result = true;
+    }
+
+    function deleteDetails(address _user) internal {
+        UserDetails storage details = monstersOnMissions[_user];
+        delete details.mission;
+        delete details.owner;
+        delete details.startTime;
+        delete details.monstersAmount;
+        deleteMonsters(_user);
+    }
+
+    function deleteMonsters(address _user) internal {
+        UserDetails storage details = monstersOnMissions[_user];
+        uint256 amount = details.monstersAmount;
+        for (uint256 i; i < amount; ++i) {
+            delete details.monsters[i];
+        }
     }
 
     function randomNumber() internal returns (uint256 number) {
@@ -232,15 +284,4 @@ contract MonsterGame is IERC721Receiver {
             100;
         nonce++;
     }
-
-    function onERC721Received(
-        address,
-        address from,
-        uint256,
-        bytes calldata
-    ) external pure override returns (bytes4) {
-        return IERC721Receiver.onERC721Received.selector;
-    }
-
-    receive() external payable {}
 }

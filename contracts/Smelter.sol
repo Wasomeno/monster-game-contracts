@@ -18,44 +18,58 @@ contract Smelter is ERC1155Holder {
 
     event Smelt(uint256 _quantity, uint256 _startTime);
 
+    error NotSmelting(bool _status);
+    error IsSmelting(bool _status);
+    error NotValidToSmelt(uint256 _balance, uint256 _quantity);
+    error NotValidToFinishSmelt(uint256 _elapsedTime);
+
     modifier isSmelting(address _user) {
         bool status = smeltingStatus[_user];
-        require(status, "You're not smelting any crystals");
+        if (!status) {
+            revert NotSmelting(status);
+        }
         _;
     }
 
     modifier isNotSmelting(address _user) {
         bool status = smeltingStatus[_user];
-        require(!status, "You're still smelting");
+        if (status) {
+            revert IsSmelting(status);
+        }
         _;
+    }
+
+    function smelt(uint256 _quantity) external isNotSmelting(msg.sender) {
+        uint256 crystalBalance = itemInterface.balanceOf(msg.sender, 4);
+        if (crystalBalance == 0 || _quantity > 100) {
+            revert NotValidToSmelt(crystalBalance, _quantity);
+        }
+        itemInterface.safeTransferFrom(
+            msg.sender,
+            address(this),
+            4,
+            _quantity,
+            ""
+        );
+        smeltDetails[msg.sender] = Details(_quantity, block.timestamp);
+        emit Smelt(_quantity, block.timestamp);
+    }
+
+    function finishSmelting() external isSmelting(msg.sender) {
+        (uint256 quantity, uint256 start) = (
+            smeltDetails[msg.sender].quantity,
+            smeltDetails[msg.sender].startTime
+        );
+        uint256 time = start + (quantity * 15 minutes);
+        uint256 reward = quantity * 5;
+        if (time > block.timestamp) {
+            revert NotValidToFinishSmelt(time);
+        }
+        tokenInterface.mint(msg.sender, reward);
     }
 
     function setInterface(address _itemNFT, address _monsterToken) public {
         itemInterface = IERC1155(_itemNFT);
         tokenInterface = IMonsterToken(_monsterToken);
-    }
-
-    function smelt(address _user, uint256 _quantity)
-        external
-        isNotSmelting(_user)
-    {
-        uint256 crystalBalance = itemInterface.balanceOf(_user, 4);
-        require(crystalBalance > 0, "You don't have a any crystal to be smelt");
-        require(_quantity >= 100, "Max quantity exceed");
-        itemInterface.safeTransferFrom(_user, address(this), 4, _quantity, "");
-        smeltDetails[_user] = Details(_quantity, block.timestamp);
-        emit Smelt(_quantity, block.timestamp);
-    }
-
-    function finishSmelting(address _user) external isSmelting(_user) {
-        (uint256 quantity, uint256 start) = (
-            smeltDetails[_user].quantity,
-            smeltDetails[_user].startTime
-        );
-        uint256 time = start + (quantity * 15 minutes);
-        uint256 reward = quantity * 5;
-
-        require(time < block.timestamp, "Your crystal stil being smelted");
-        tokenInterface.mint(_user, reward);
     }
 }

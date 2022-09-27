@@ -13,10 +13,13 @@ contract UsersData {
     mapping(address => bool) public registrationStatus;
 
     event Registered(address _user, bytes32 _name);
+    error isRegistered();
 
     modifier isNotRegistered(address _user) {
         bool status = registrationStatus[_user];
-        require(!status, "You're already registered");
+        if (status) {
+            revert isRegistered();
+        }
         _;
     }
 
@@ -25,6 +28,7 @@ contract UsersData {
         isNotRegistered(msg.sender)
     {
         userDataDetails[msg.sender] = Details(msg.sender, _profile, _name);
+        registrationStatus[msg.sender] = true;
         emit Registered(msg.sender, _name);
     }
 
