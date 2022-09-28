@@ -3,6 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "./IMonsterToken.sol";
+import "./IUsersData.sol";
 
 contract Smelter is ERC1155Holder {
     struct Details {
@@ -10,8 +11,9 @@ contract Smelter is ERC1155Holder {
         uint256 startTime;
     }
 
-    IERC1155 itemInterface;
-    IMonsterToken tokenInterface;
+    IERC1155 public itemInterface;
+    IMonsterToken public tokenInterface;
+    IUsersData public usersDataInterface;
 
     mapping(address => Details) public smeltDetails;
     mapping(address => bool) public smeltingStatus;
@@ -36,6 +38,11 @@ contract Smelter is ERC1155Holder {
         if (status) {
             revert IsSmelting(status);
         }
+        _;
+    }
+
+    modifier isRegistered(address _user) {
+        usersDataInterface.checkRegister(_user);
         _;
     }
 
