@@ -2,10 +2,12 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IMonster.sol";
 
-contract Items is ERC1155 {
-    IMonster private monsterInterface;
+contract Items is ERC1155, Ownable {
+    IMonster public monsterInterface;
+
     uint256 internal constant M_COINS = 0;
     uint256 internal constant BERRY = 1;
     uint256 internal constant ENERGY_POTION = 2;
@@ -13,6 +15,7 @@ contract Items is ERC1155 {
     uint256 internal constant TOKEN_CRYSTAL = 4;
 
     uint256[] internal items;
+    mapping(address => bool) public approvedAddress;
     mapping(uint256 => uint256[]) public itemRateSet;
     mapping(uint256 => uint256[]) public itemSet;
     mapping(uint256 => uint256[]) public bossRewardSet;
@@ -53,6 +56,8 @@ contract Items is ERC1155 {
         bossRateSet[0].push(10);
     }
 
+    error NotApproved(address _caller);
+
     event BeginnerMissionReward(
         uint256 _monster,
         uint256[] _items,
@@ -71,11 +76,26 @@ contract Items is ERC1155 {
         uint256[] _amount
     );
 
-    function setInterface(address _monsterGame, address _monsterNFT) external {
+    modifier isApproved(address _caller) {
+        bool result = approvedAddress[_caller];
+        if (!result) {
+            revert NotApproved(_caller);
+        }
+        _;
+    }
+
+    function setApprovedAddress(address _approved) external onlyOwner {
+        approvedAddress[_approved] = true;
+    }
+
+    function setInterface(address _monsterGame, address _monsterNFT)
+        external
+        onlyOwner
+    {
         monsterInterface = IMonster(_monsterNFT);
     }
 
-    function addNewItems(uint256[] memory _items) external {
+    function addNewItems(uint256[] memory _items) external onlyOwner {
         for (uint256 i; i < _items.length; ++i) {
             items.push(_items[i]);
         }
@@ -85,7 +105,7 @@ contract Items is ERC1155 {
         address _user,
         uint256[] calldata _id,
         uint256[] calldata _quantity
-    ) external {
+    ) internal isApproved(msg.sender) {
         uint256 arrLength = _id.length;
         for (uint256 i; i < arrLength; ++i) {
             _mint(_user, _id[i], _quantity[i], "");
@@ -96,17 +116,23 @@ contract Items is ERC1155 {
         address _user,
         uint256 _id,
         uint256 _quantity
-    ) external {
+    ) internal isApproved(msg.sender) {
         _mint(_user, _id, _quantity, "");
     }
 
-    function newItemRatesSet(uint256 _id, uint256[] memory _rate) external {
+    function newItemRatesSet(uint256 _id, uint256[] memory _rate)
+        external
+        onlyOwner
+    {
         for (uint256 i; i < _rate.length; i++) {
             itemRateSet[_id].push(_rate[i]);
         }
     }
 
-    function newItemsSet(uint256 _id, uint256[] memory _item) external {
+    function newItemsSet(uint256 _id, uint256[] memory _item)
+        external
+        onlyOwner
+    {
         for (uint256 i; i < _item.length; i++) {
             itemSet[_id].push(_item[i]);
         }
@@ -117,7 +143,7 @@ contract Items is ERC1155 {
         uint256 _monster,
         address _user,
         uint256 _odds
-    ) external {
+    ) internal isApproved(msg.sender) {
         if (_mission != 2) {
             beginnerMissionReward(_monster, _user, _odds);
         }
@@ -130,7 +156,7 @@ contract Items is ERC1155 {
         address _user,
         uint256 _odds,
         uint256 _chance
-    ) external {
+    ) internal isApproved(msg.sender) {
         if (_odds < _chance) {
             uint256[] memory bossItemsSetOne = bossRewardSet[0];
             uint256[] memory bossQuantitiesSetOne = bossRateSet[0];
