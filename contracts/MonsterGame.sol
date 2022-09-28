@@ -8,11 +8,6 @@ import "./IItems.sol";
 import "./IUsersData.sol";
 
 contract MonsterGame is ERC1155Holder {
-    IMonster public monstersInterface;
-    IItems public itemsInterface;
-    IUsersData public usersDataInterface;
-    IERC1155 public erc1155Interface;
-
     struct UserDetails {
         uint256 mission;
         uint256 monstersAmount;
@@ -26,10 +21,15 @@ contract MonsterGame is ERC1155Holder {
         uint256 exp;
     }
 
+    IMonster public monstersInterface;
+    IItems public itemsInterface;
+    IUsersData public usersDataInterface;
+    IERC1155 public erc1155Interface;
+
     uint256 internal nonce;
-    uint256 constant BEGINNER_MISSION_ID = 1;
-    uint256 constant INTERMEDIATE_MISSION_ID = 2;
-    uint256 constant FEEDING_FEE = 0.0001 ether;
+    uint256 internal constant BEGINNER_MISSION_ID = 1;
+    uint256 internal constant INTERMEDIATE_MISSION_ID = 2;
+    uint256 public constant FEEDING_FEE = 0.0001 ether;
 
     mapping(address => UserDetails) public monstersOnMissions;
     mapping(address => bool) public missioningStatus;
@@ -42,20 +42,21 @@ contract MonsterGame is ERC1155Holder {
 
     receive() external payable {}
 
-    error NotRegistered(address _user, bool _result);
-    error NotOnMission(address _user, bool _result);
-    error IsOnMission(address _user, bool _result);
+    error NotRegistered(bool _result);
+    error NotOnMission(bool _result);
+    error IsOnMission(bool _result);
     error IsActive(uint256 _monster, uint256 _status);
     error NotValidToFeed(uint256 _monster, uint256 _energy, uint256 _amount);
     error NotValidToIntermediate(uint256 _monster, uint256 _level);
     error NotValidToMission(uint256 _monster, uint256 _energy, uint256 _status);
     error NotValidToFinishMission(uint256 _elapsedTime);
-    error NotValidToUsePotion();
+    error NotValidToUsePotion(uint256 _balance, uint256 _amount);
+    error MonstersAmountNotValid(uint256 _amount, uint256 _limit);
 
     modifier isOnMission(address _user) {
         bool status = missioningStatus[_user];
         if (!status) {
-            revert NotOnMission(_user, status);
+            revert NotOnMission(status);
         }
         _;
     }
@@ -63,7 +64,7 @@ contract MonsterGame is ERC1155Holder {
     modifier isNotOnMission(address _user) {
         bool status = missioningStatus[_user];
         if (status) {
-            revert IsOnMission(_user, status);
+            revert IsOnMission(status);
         }
         _;
     }
@@ -76,11 +77,8 @@ contract MonsterGame is ERC1155Holder {
         _;
     }
 
-    modifier isValid(address _user) {
-        bool result = usersDataInterface.checkRegister(_user);
-        if (!result) {
-            revert NotRegistered(_user, result);
-        }
+    modifier isRegistered(address _user) {
+        usersDataInterface.checkRegister(_user);
         _;
     }
 
@@ -110,8 +108,11 @@ contract MonsterGame is ERC1155Holder {
     function startMission(uint256 _mission, uint256[] calldata _monsters)
         external
         isNotOnMission(msg.sender)
-        isValid(msg.sender)
+        isRegistered(msg.sender)
     {
+        if (_monsters.length > 6) {
+            revert MonstersAmountNotValid(_monsters.length, 6);
+        }
         require(_monsters.length <= 6, "Above limit");
         UserDetails storage details = monstersOnMissions[msg.sender];
         for (uint256 i; i < _monsters.length; ++i) {
@@ -159,7 +160,7 @@ contract MonsterGame is ERC1155Holder {
     function feedMonster(uint256 _monster, uint256 _amount)
         external
         payable
-        isValid(msg.sender)
+        isRegistered(msg.sender)
         isValidToFeed(_monster, _amount)
     {
         uint256 monsterEnergy = monstersInterface.getMonsterEnergy(_monster);
@@ -170,14 +171,14 @@ contract MonsterGame is ERC1155Holder {
     function useEnergyPotion(uint256 _monster, uint256 _amount)
         external
         isNotActive(_monster)
-        isValid(msg.sender)
+        isRegistered(msg.sender)
     {
         uint256 balance = erc1155Interface.balanceOf(msg.sender, 2);
         uint256 energy = monstersInterface.getMonsterEnergy(_monster);
         uint256 energyGained = _amount * 10;
         uint256 newEnergy = energy + energyGained;
         if (balance < _amount || newEnergy > 100) {
-            revert NotValidToUsePotion();
+            revert NotValidToUsePotion(balance, _amount);
         }
         erc1155Interface.safeTransferFrom(
             msg.sender,
@@ -192,12 +193,12 @@ contract MonsterGame is ERC1155Holder {
     function useExpPotion(uint256 _monster, uint256 _amount)
         external
         isNotActive(_monster)
-        isValid(msg.sender)
+        isRegistered(msg.sender)
     {
         uint256 balance = erc1155Interface.balanceOf(msg.sender, 3);
         uint256 expEarned = _amount * 3;
         if (balance < _amount) {
-            revert NotValidToUsePotion();
+            revert NotValidToUsePotion(balance, _amount);
         }
         erc1155Interface.safeTransferFrom(
             msg.sender,
