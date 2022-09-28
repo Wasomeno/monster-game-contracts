@@ -3,6 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./IUsersData.sol";
 
 contract Monsters is ERC721, Ownable {
     struct Stats {
@@ -15,23 +16,61 @@ contract Monsters is ERC721, Ownable {
         uint256 status;
     }
 
-    uint256 public monsterPopulation = 0;
-    uint256 public monsterPopulationCap = 100;
-    uint256 public nonce = 0;
-    uint256 public price = 0.002 ether;
+    IUsersData public usersDataInterface;
+
+    uint256 public constant MAX_MONSTER_POPULATION = 10000;
+    uint256 public constant SUMMON_PRICE = 0.002 ether;
+    uint256 public monsterPopulation;
+    uint256 public nonce;
     string private _baseTokenURI;
 
     mapping(uint256 => Stats) public monsterStats;
+    mapping(address => bool) public approvedAddress;
 
     constructor() ERC721("Monsters", "MTR") {}
 
-    function summon(uint256 _quantity) external payable {
-        require(_quantity <= 5, "You can't mint more than 5");
-        require(msg.value == _quantity * price, "Wrong value of ether sent");
+    receive() external payable {}
+
+    error NotValidToSummon(
+        uint256 _quantity,
+        uint256 _sent,
+        uint256 _population
+    );
+
+    error CallerNotApproved(address _caller);
+
+    modifier isRegistered(address _user) {
+        usersDataInterface.checkRegister(_user);
+        _;
+    }
+
+    modifier isApproved(address _caller) {
+        bool result = approvedAddress[_caller];
+        if (!result) {
+            revert CallerNotApproved(_caller);
+        }
+        _;
+    }
+
+    function summon(uint256 _quantity)
+        external
+        payable
+        isRegistered(msg.sender)
+    {
+        uint256 total = _quantity * SUMMON_PRICE;
+        uint256 _monsterPopulation = monsterPopulation;
+        uint256 population = _monsterPopulation + _quantity;
+        if (
+            _quantity > 5 ||
+            msg.value != total ||
+            population > MAX_MONSTER_POPULATION
+        ) {
+            revert NotValidToSummon(_quantity, msg.value, _monsterPopulation);
+        }
         for (uint256 i; i < _quantity; ++i) {
-            _safeMint(msg.sender, monsterPopulation);
-            monsterStats[monsterPopulation] = Stats(
-                monsterPopulation,
+            _mint(msg.sender, _monsterPopulation);
+            monsterStats[_monsterPopulation] = Stats(
+                _monsterPopulation,
                 1,
                 30,
                 0,
@@ -39,22 +78,45 @@ contract Monsters is ERC721, Ownable {
                 0,
                 0
             );
-            monsterPopulation++;
+            _monsterPopulation++;
+        }
+        monsterPopulation = _monsterPopulation;
+    }
+
+    function setApprovedAddress(address _approved) external onlyOwner {
+        approvedAddress[_approved] = true;
+    }
+
+    function expUp(uint256 _tokenId, uint256 _amount)
+        external
+        isApproved(msg.sender)
+    {
+        Stats storage monster = monsterStats[_tokenId];
+        monster.exp += _amount;
+        if (monster.exp > monster.expCap) {
+            levelUp(_tokenId);
         }
     }
 
-    function getMonsters(address _to) public view returns (uint256[] memory) {
-        uint256[] memory monsters = new uint256[](balanceOf(_to));
-        uint256 _monsterPopulation = monsterPopulation;
-        uint256 index = 0;
+    function setEnergy(uint256 _tokenId, uint256 _energy)
+        external
+        isApproved(msg.sender)
+    {
+        Stats storage monster = monsterStats[_tokenId];
+        monster.energy = _energy;
+    }
 
-        for (uint256 i; i < _monsterPopulation; i++) {
-            if (ownerOf(i) == _to) {
-                monsters[index] = i;
-            }
-            index++;
-        }
-        return monsters;
+    function setCooldown(uint256 _tokenId) external {
+        Stats storage monster = monsterStats[_tokenId];
+        monster.cooldown = block.timestamp + 5 minutes;
+    }
+
+    function setStatus(uint256 _tokenId, uint256 _status)
+        external
+        isApproved(msg.sender)
+    {
+        Stats storage monster = monsterStats[_tokenId];
+        monster.status = _status;
     }
 
     function getMonstersDetails(address _to)
@@ -70,39 +132,6 @@ contract Monsters is ERC721, Ownable {
             monstersDetails[i] = details;
         }
         return monstersDetails;
-    }
-
-    function levelUp(uint256 _tokenId) internal {
-        Stats storage monster = monsterStats[_tokenId];
-        Stats memory monsterMem = monsterStats[_tokenId];
-        uint256 monsterExp = monsterMem.exp;
-        uint256 monsterExpCap = monsterMem.expCap;
-        monster.level++;
-        monster.exp = monsterExp - monsterExpCap;
-        monster.expCap = monsterMem.level * 15;
-    }
-
-    function expUp(uint256 _tokenId, uint256 _amount) external {
-        Stats storage monster = monsterStats[_tokenId];
-        monster.exp += _amount;
-        if (monster.exp > monster.expCap) {
-            levelUp(_tokenId);
-        }
-    }
-
-    function setEnergy(uint256 _tokenId, uint256 _energy) external {
-        Stats storage monster = monsterStats[_tokenId];
-        monster.energy = _energy;
-    }
-
-    function setCooldown(uint256 _tokenId) external {
-        Stats storage monster = monsterStats[_tokenId];
-        monster.cooldown = block.timestamp + 5 minutes;
-    }
-
-    function setStatus(uint256 _tokenId, uint256 _status) external {
-        Stats storage monster = monsterStats[_tokenId];
-        monster.status = _status;
     }
 
     function getMonsterExp(uint256 _tokenId) external view returns (uint256) {
@@ -134,7 +163,7 @@ contract Monsters is ERC721, Ownable {
     }
 
     function getMonsterCooldown(uint256 _tokenId)
-        public
+        external
         view
         returns (uint256)
     {
@@ -142,34 +171,55 @@ contract Monsters is ERC721, Ownable {
         return monsterCooldown;
     }
 
-    function getMonsterStatus(uint256 _tokenId) public view returns (uint256) {
+    function getMonsterStatus(uint256 _tokenId)
+        external
+        view
+        returns (uint256)
+    {
         uint256 monsterStatus = monsterStats[_tokenId].status;
         return monsterStatus;
-    }
-
-    function feedMonster(uint256 _tokenId, uint256 _amount) external {
-        uint256 energy = monsterStats[_tokenId].energy;
-        require(energy + _amount < 100, "Too much food");
-        Stats storage monster = monsterStats[_tokenId];
-        monster.energy = energy + _amount;
-    }
-
-    function _baseURI() internal view virtual override returns (string memory) {
-        return _baseTokenURI;
     }
 
     function setBaseURI(string memory baseURI) public onlyOwner {
         _baseTokenURI = baseURI;
     }
 
+    function getMonsters(address _to) public view returns (uint256[] memory) {
+        uint256 index;
+        uint256 balance = balanceOf(_to);
+        uint256[] memory monsters = new uint256[](balance);
+        uint256 _monsterPopulation = monsterPopulation;
+        for (uint256 i; i < _monsterPopulation; ++i) {
+            address owner = ownerOf(i);
+            if (owner == _to) {
+                monsters[index] = i;
+                index++;
+            }
+        }
+        return monsters;
+    }
+
     function ownerOf(uint256 _monster)
         public
         view
+        virtual
         override
-        returns (address owner)
+        returns (address _owner)
     {
-        owner = ownerOf(_monster);
+        _owner = ownerOf(_monster);
     }
 
-    receive() external payable {}
+    function levelUp(uint256 _tokenId) internal {
+        Stats storage monster = monsterStats[_tokenId];
+        Stats memory monsterMem = monsterStats[_tokenId];
+        uint256 monsterExp = monsterMem.exp;
+        uint256 monsterExpCap = monsterMem.expCap;
+        monster.level++;
+        monster.exp = monsterExp - monsterExpCap;
+        monster.expCap = monsterMem.level * 15;
+    }
+
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _baseTokenURI;
+    }
 }
