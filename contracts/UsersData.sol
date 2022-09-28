@@ -12,13 +12,14 @@ contract UsersData {
     mapping(address => Details) public userDataDetails;
     mapping(address => bool) public registrationStatus;
 
-    event Registered(address _user, bytes32 _name);
-    error isRegistered();
+    event Registered(bytes32 _name);
+    error isRegistered(bool _status);
+    error NotRegistered(bool _status);
 
     modifier isNotRegistered(address _user) {
         bool status = registrationStatus[_user];
         if (status) {
-            revert isRegistered();
+            revert isRegistered(status);
         }
         _;
     }
@@ -29,13 +30,13 @@ contract UsersData {
     {
         userDataDetails[msg.sender] = Details(msg.sender, _profile, _name);
         registrationStatus[msg.sender] = true;
-        emit Registered(msg.sender, _name);
+        emit Registered(_name);
     }
 
-    function checkRegister(address _user) external view returns (bool result) {
+    function checkRegister(address _user) external view {
         bool status = registrationStatus[_user];
-        if (status != false) {
-            result = true;
+        if (!status || _user == address(0)) {
+            revert NotRegistered(status);
         }
     }
 }
