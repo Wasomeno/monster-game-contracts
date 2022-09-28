@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "./IMonster.sol";
+import "./IUsersData.sol";
 
 contract Nursery {
     struct Details {
@@ -13,6 +14,7 @@ contract Nursery {
     }
 
     IMonster monsterInterface;
+    IUsersData usersDataInterface;
     uint256 public RESTING_FEE = 0.001 ether;
 
     mapping(address => Details) public monstersOnNursery;
@@ -21,22 +23,43 @@ contract Nursery {
     receive() external payable {}
 
     error FeeNotValid(uint256 _sent);
+    error NotResting(bool _status);
+    error IsResting(bool _status);
     error NotValidToRest(uint256 _monster, uint256 _duration, uint256 _status);
     error NotValidToFinishRest(uint256 _timeElapsed, uint256 _timeNow);
+    error MonstersAmountNotValid(uint256 _amount, uint256 _limit);
 
-    modifier isRestingMonsters(address _user) {
+    modifier isResting(address _user) {
         bool status = restingStatus[_user];
-        require(status, "You're not resting any monsters");
+        if (!status) {
+            revert NotResting(status);
+        }
         _;
     }
 
-    function restMonsters(
-        uint256[] calldata _monsters,
-        address _user,
-        uint256 _duration
-    ) external payable {
-        require(_monsters.length <= 6, "Above Limit");
-        Details storage details = monstersOnNursery[_user];
+    modifier isNotResting(address _user) {
+        bool status = restingStatus[_user];
+        if (status) {
+            revert IsResting(status);
+        }
+        _;
+    }
+
+    modifier isRegistered(address _user) {
+        usersDataInterface.checkRegister(_user);
+        _;
+    }
+
+    function restMonsters(uint256[] calldata _monsters, uint256 _duration)
+        external
+        payable
+        isRegistered(msg.sender)
+        isNotResting(msg.sender)
+    {
+        if (_monsters.length > 6) {
+            revert MonstersAmountNotValid(_monsters.length, 6);
+        }
+        Details storage details = monstersOnNursery[msg.sender];
         uint256 totalFee = _duration * RESTING_FEE * _monsters.length;
         if (msg.value != totalFee) {
             revert FeeNotValid(msg.value);
@@ -54,14 +77,14 @@ contract Nursery {
         }
         details.duration = _duration;
         details.monstersAmount = _monsters.length;
-        details.owner = _user;
+        details.owner = msg.sender;
         details.startTime = block.timestamp;
-        restingStatus[_user] = true;
+        restingStatus[msg.sender] = true;
     }
 
-    function finishResting(address _user) external isRestingMonsters(_user) {
-        Details storage details = monstersOnNursery[_user];
-        uint256[] memory monsters = getRestingMonsters(_user);
+    function finishResting() external isResting(msg.sender) {
+        Details storage details = monstersOnNursery[msg.sender];
+        uint256[] memory monsters = getRestingMonsters(msg.sender);
         uint256 startTime = details.startTime;
         uint256 duration = details.duration;
         uint256 timeElapsed = startTime + duration;
@@ -75,9 +98,8 @@ contract Nursery {
             monsterInterface.setEnergy(monster, newEnergy);
             monsterInterface.setStatus(monster, 0);
         }
-        deleteDetails(_user);
-        (_user);
-        restingStatus[_user] = false;
+        deleteDetails(msg.sender);
+        restingStatus[msg.sender] = false;
     }
 
     function setInterface(address _monsterNFT) public {
