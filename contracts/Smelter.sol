@@ -2,13 +2,14 @@
 pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IMonsterToken.sol";
 import "./IUsersData.sol";
 
-contract Smelter is ERC1155Holder {
+contract Smelter is ERC1155Holder, Ownable {
     struct Details {
-        uint256 quantity;
-        uint256 startTime;
+        uint16 quantity;
+        uint16 startTime;
     }
 
     IERC1155 public itemInterface;
@@ -25,28 +26,38 @@ contract Smelter is ERC1155Holder {
     error NotValidToSmelt(uint256 _balance, uint256 _quantity);
     error NotValidToFinishSmelt(uint256 _elapsedTime);
 
-    modifier isSmelting(address _user) {
-        bool status = smeltingStatus[_user];
+    modifier isSmelting() {
+        bool status = smeltingStatus[msg.sender];
         if (!status) {
             revert NotSmelting(status);
         }
         _;
     }
 
-    modifier isNotSmelting(address _user) {
-        bool status = smeltingStatus[_user];
+    modifier isNotSmelting() {
+        bool status = smeltingStatus[msg.sender];
         if (status) {
             revert IsSmelting(status);
         }
         _;
     }
 
-    modifier isRegistered(address _user) {
-        usersDataInterface.checkRegister(_user);
+    modifier isRegistered() {
+        usersDataInterface.checkRegister(msg.sender);
         _;
     }
 
-    function smelt(uint256 _quantity) external isNotSmelting(msg.sender) {
+    function setInterface(
+        address _itemsContract,
+        address _monsterTokenContract,
+        address _usersDataContract
+    ) external onlyOwner {
+        itemInterface = IERC1155(_itemsContract);
+        tokenInterface = IMonsterToken(_monsterTokenContract);
+        usersDataInterface = IUsersData(_usersDataContract);
+    }
+
+    function smelt(uint256 _quantity) external isNotSmelting isRegistered {
         uint256 crystalBalance = itemInterface.balanceOf(msg.sender, 4);
         if (crystalBalance == 0 || _quantity > 100) {
             revert NotValidToSmelt(crystalBalance, _quantity);
@@ -58,11 +69,14 @@ contract Smelter is ERC1155Holder {
             _quantity,
             ""
         );
-        smeltDetails[msg.sender] = Details(_quantity, block.timestamp);
+        smeltDetails[msg.sender] = Details(
+            uint16(_quantity),
+            uint16(block.timestamp)
+        );
         emit Smelt(_quantity, block.timestamp);
     }
 
-    function finishSmelting() external isSmelting(msg.sender) {
+    function finishSmelting() external isSmelting {
         (uint256 quantity, uint256 start) = (
             smeltDetails[msg.sender].quantity,
             smeltDetails[msg.sender].startTime
@@ -73,10 +87,5 @@ contract Smelter is ERC1155Holder {
             revert NotValidToFinishSmelt(time);
         }
         tokenInterface.mint(msg.sender, reward);
-    }
-
-    function setInterface(address _itemNFT, address _monsterToken) public {
-        itemInterface = IERC1155(_itemNFT);
-        tokenInterface = IMonsterToken(_monsterToken);
     }
 }
