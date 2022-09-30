@@ -2,20 +2,20 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IMonster.sol";
 import "./IUsersData.sol";
 import "./IItems.sol";
 
-contract Dungeon {
+contract Dungeon is Ownable {
     struct Details {
-        uint256 monstersAmount;
-        mapping(uint256 => uint256) monsters;
-        uint256 startTime;
+        uint8 monstersAmount;
+        mapping(uint256 => uint8) monsters;
+        uint16 startTime;
         address owner;
     }
 
-    IERC721 public monsterInterface;
-    IMonster public statsInterface;
+    IMonster public monstersInterface;
     IItems public itemInterface;
     IUsersData public usersDataInterface;
 
@@ -33,31 +33,41 @@ contract Dungeon {
         uint256 _energy
     );
 
-    modifier isDungeoning(address _user) {
-        bool status = dungeoningStatus[_user];
+    modifier isDungeoning() {
+        bool status = dungeoningStatus[msg.sender];
         if (!status) {
             revert NotDungeoning(status);
         }
         _;
     }
 
-    modifier isNotDungeoning(address _user) {
-        bool status = dungeoningStatus[_user];
+    modifier isNotDungeoning() {
+        bool status = dungeoningStatus[msg.sender];
         if (status) {
             revert IsDungeoning(status);
         }
         _;
     }
 
-    modifier isRegistered(address _user) {
-        usersDataInterface.checkRegister(_user);
+    modifier isRegistered() {
+        usersDataInterface.checkRegister(msg.sender);
         _;
+    }
+
+    function setInterface(
+        address _monstersContract,
+        address _itemsContract,
+        address _usersDataContract
+    ) external onlyOwner {
+        monstersInterface = IMonster(_monstersContract);
+        itemInterface = IItems(_itemsContract);
+        usersDataInterface = IUsersData(_usersDataContract);
     }
 
     function startDungeon(uint256[] calldata _monsters)
         external
-        isNotDungeoning(msg.sender)
-        isRegistered(msg.sender)
+        isNotDungeoning
+        isRegistered
     {
         if (_monsters.length > 6) {
             revert MonstersAmountNotValid(_monsters.length, 6);
@@ -65,23 +75,29 @@ contract Dungeon {
         Details storage details = monstersOnDungeon[msg.sender];
         for (uint256 i; i < _monsters.length; ++i) {
             uint256 monster = _monsters[i];
-            uint256 level = statsInterface.getMonsterLevel(monster);
-            uint256 status = statsInterface.getMonsterStatus(monster);
-            uint256 energy = statsInterface.getMonsterEnergy(monster);
-            uint256 cooldown = statsInterface.getMonsterCooldown(monster);
-            if (status != 0 || cooldown > block.timestamp || energy < 20) {
+            uint256 level = monstersInterface.getMonsterLevel(monster);
+            uint256 status = monstersInterface.getMonsterStatus(monster);
+            uint256 energy = monstersInterface.getMonsterEnergy(monster);
+            uint256 cooldown = monstersInterface.getMonsterCooldown(monster);
+            address owner = monstersInterface.monsterOwner(monster);
+            if (
+                status != 0 ||
+                cooldown > block.timestamp ||
+                owner != msg.sender ||
+                energy < 20
+            ) {
                 revert NotValidToDungeon(status, cooldown, energy);
             }
-            statsInterface.setStatus(monster, 3);
-            details.monsters[i] = monster;
+            monstersInterface.setStatus(monster, 3);
+            details.monsters[i] = uint8(monster);
         }
-        details.monstersAmount = _monsters.length;
+        details.monstersAmount = uint8(_monsters.length);
         details.owner = msg.sender;
-        details.startTime = block.timestamp;
+        details.startTime = uint16(block.timestamp);
         dungeoningStatus[msg.sender] = true;
     }
 
-    function finishDungeon() external isDungeoning(msg.sender) {
+    function finishDungeon() external isDungeoning {
         Details storage details = monstersOnDungeon[msg.sender];
         uint256[] memory monsters = getMonstersOnDungeon(msg.sender);
         uint256 expEarned = 8;
@@ -91,29 +107,23 @@ contract Dungeon {
         }
         for (uint256 i; i < monsters.length; ++i) {
             uint256 monster = monsters[i];
-            uint256 energy = statsInterface.getMonsterEnergy(monster);
+            uint256 energy = monstersInterface.getMonsterEnergy(monster);
             uint256 newEnergy = energy - 20;
-            uint256 level = statsInterface.getMonsterLevel(monster);
+            uint256 level = monstersInterface.getMonsterLevel(monster);
             uint256 odds = bossFightChance(level * 30);
-            statsInterface.setCooldown(monster);
-            statsInterface.setEnergy(monster, newEnergy);
-            statsInterface.expUp(monster, expEarned);
+            monstersInterface.setCooldown(monster);
+            monstersInterface.setEnergy(monster, newEnergy);
+            monstersInterface.expUp(monster, expEarned);
             itemInterface.bossFightReward(
                 monster,
                 msg.sender,
                 randomNumber(),
                 odds
             );
-            statsInterface.setStatus(monster, 0);
+            monstersInterface.setStatus(monster, 0);
         }
         deleteDetails(msg.sender);
         dungeoningStatus[msg.sender] = false;
-    }
-
-    function setInterface(address monsterNFT, address itemNFT) public {
-        monsterInterface = IERC721(monsterNFT);
-        statsInterface = IMonster(monsterNFT);
-        itemInterface = IItems(itemNFT);
     }
 
     function getMonstersOnDungeon(address _user)
