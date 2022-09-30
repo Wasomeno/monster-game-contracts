@@ -12,30 +12,33 @@ interface IMonster {
         uint256 status;
     }
 
-    function levelUp(uint256 _tokenId) external;
+    function levelUp(uint256 _monster) external;
 
-    function expUp(uint256 _tokenId, uint256 _amount) external;
+    function expUp(uint256 _monster, uint256 _amount) external;
 
-    function setEnergy(uint256 _tokenId, uint256 _energy) external;
+    function setEnergy(uint256 _monster, uint256 _energy) external;
 
-    function setCooldown(uint256 _tokenId) external;
+    function setCooldown(uint256 _monster) external;
 
-    function setStatus(uint256 _tokenId, uint256 _status) external;
+    function setStatus(uint256 _monster, uint256 _status) external;
 
-    function getMonsterExp(uint256 _tokenId) external view returns (uint256);
+    function getMonsterExp(uint256 _monster) external view returns (uint256);
 
-    function getMonsterLevel(uint256 _tokenId) external view returns (uint256);
+    function getMonsterLevel(uint256 _monster) external view returns (uint256);
 
-    function getMonsterExpCap(uint256 _tokenId) external view returns (uint256);
+    function getMonsterExpCap(uint256 _monster) external view returns (uint256);
 
-    function getMonsterEnergy(uint256 _tokenId) external view returns (uint256);
+    function getMonsterEnergy(uint256 _monster) external view returns (uint256);
 
-    function getMonsterCooldown(uint256 _tokenId)
+    function getMonsterCooldown(uint256 _monster)
         external
         view
-        returns (uint256);
+        returns (uint32);
 
-    function getMonsterStatus(uint256 _tokenId) external view returns (uint256);
+    function getMonsterStatus(uint256 _monster) external view returns (uint256);
 
-    function ownerOf(uint256 _monster) external view returns (address _owner);
+    function monsterOwner(uint256 _monster)
+        external
+        view
+        returns (address _owner);
 }
