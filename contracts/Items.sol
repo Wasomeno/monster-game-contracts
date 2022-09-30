@@ -3,58 +3,29 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./IMonster.sol";
 
 contract Items is ERC1155, Ownable {
-    IMonster public monsterInterface;
-
-    uint256 internal constant M_COINS = 0;
-    uint256 internal constant BERRY = 1;
-    uint256 internal constant ENERGY_POTION = 2;
-    uint256 internal constant EXP_POTION = 3;
-    uint256 internal constant TOKEN_CRYSTAL = 4;
-
-    uint256[] internal items;
-    mapping(address => bool) public approvedAddress;
-    mapping(uint256 => uint256[]) public itemRateSet;
-    mapping(uint256 => uint256[]) public itemSet;
-    mapping(uint256 => uint256[]) public bossRewardSet;
-    mapping(uint256 => uint256[]) public bossRateSet;
-
-    constructor() ERC1155("") {
-        itemSet[0].push(0);
-        itemSet[0].push(1);
-        itemRateSet[0].push(3);
-        itemRateSet[0].push(5);
-
-        itemSet[1].push(0);
-        itemSet[1].push(1);
-        itemRateSet[1].push(6);
-        itemRateSet[1].push(7);
-
-        itemSet[2].push(0);
-        itemSet[2].push(1);
-        itemRateSet[2].push(10);
-        itemRateSet[2].push(10);
-
-        bossRewardSet[0].push(0);
-        bossRewardSet[0].push(2);
-        bossRewardSet[0].push(3);
-        bossRewardSet[0].push(4);
-
-        bossRewardSet[1].push(0);
-        bossRewardSet[1].push(2);
-        bossRewardSet[1].push(4);
-
-        bossRateSet[1].push(10);
-        bossRateSet[1].push(1);
-        bossRateSet[1].push(3);
-
-        bossRateSet[0].push(50);
-        bossRateSet[0].push(2);
-        bossRateSet[0].push(1);
-        bossRateSet[0].push(10);
+    struct Details {
+        uint8 itemsAmount;
+        mapping(uint256 => uint8) items;
+        mapping(uint256 => uint8) rates;
     }
+
+    uint8 internal constant M_COINS = 0;
+    uint8 internal constant BERRY = 1;
+    uint8 internal constant ENERGY_POTION = 2;
+    uint8 internal constant EXP_POTION = 3;
+    uint8 internal constant TOKEN_CRYSTAL = 4;
+
+    uint8 internal itemsAmount;
+    uint8 internal dropsAmount;
+
+    mapping(uint256 => uint8) public items;
+    mapping(uint256 => uint8) public drops;
+    mapping(address => bool) public approvedAddress;
+    mapping(uint256 => Details) public dropsDetails;
+
+    constructor() ERC1155("") {}
 
     error NotApproved(address _caller);
 
@@ -88,24 +59,20 @@ contract Items is ERC1155, Ownable {
         approvedAddress[_approved] = true;
     }
 
-    function setInterface(address _monsterGame, address _monsterNFT)
-        external
-        onlyOwner
-    {
-        monsterInterface = IMonster(_monsterNFT);
-    }
-
     function addNewItems(uint256[] memory _items) external onlyOwner {
-        for (uint256 i; i < _items.length; ++i) {
-            items.push(_items[i]);
+        uint256 _itemsAmount = uint256(itemsAmount);
+        uint8 newAMount = uint8(_itemsAmount + _items.length);
+        for (uint256 i = _itemsAmount; i < newAMount; ++i) {
+            items[i] = uint8(_items[i]);
         }
+        itemsAmount = newAMount;
     }
 
     function mintForShop(
         address _user,
         uint256[] calldata _id,
         uint256[] calldata _quantity
-    ) internal isApproved(msg.sender) {
+    ) external isApproved(msg.sender) {
         uint256 arrLength = _id.length;
         for (uint256 i; i < arrLength; ++i) {
             _mint(_user, _id[i], _quantity[i], "");
@@ -116,26 +83,8 @@ contract Items is ERC1155, Ownable {
         address _user,
         uint256 _id,
         uint256 _quantity
-    ) internal isApproved(msg.sender) {
+    ) external isApproved(msg.sender) {
         _mint(_user, _id, _quantity, "");
-    }
-
-    function newItemRatesSet(uint256 _id, uint256[] memory _rate)
-        external
-        onlyOwner
-    {
-        for (uint256 i; i < _rate.length; i++) {
-            itemRateSet[_id].push(_rate[i]);
-        }
-    }
-
-    function newItemsSet(uint256 _id, uint256[] memory _item)
-        external
-        onlyOwner
-    {
-        for (uint256 i; i < _item.length; i++) {
-            itemSet[_id].push(_item[i]);
-        }
     }
 
     function missionsReward(
@@ -143,7 +92,7 @@ contract Items is ERC1155, Ownable {
         uint256 _monster,
         address _user,
         uint256 _odds
-    ) internal isApproved(msg.sender) {
+    ) external isApproved(msg.sender) {
         if (_mission != 2) {
             beginnerMissionReward(_monster, _user, _odds);
         }
@@ -156,25 +105,17 @@ contract Items is ERC1155, Ownable {
         address _user,
         uint256 _odds,
         uint256 _chance
-    ) internal isApproved(msg.sender) {
+    ) external isApproved(msg.sender) {
         if (_odds < _chance) {
-            uint256[] memory bossItemsSetOne = bossRewardSet[0];
-            uint256[] memory bossQuantitiesSetOne = bossRateSet[0];
-            _mintBatch(_user, bossItemsSetOne, bossQuantitiesSetOne, "");
-            emit BossFightReward(
-                _monster,
-                bossItemsSetOne,
-                bossQuantitiesSetOne
-            );
+            uint256[] memory items = getDropItems(6);
+            uint256[] memory rates = getDropRates(6);
+            _mintBatch(_user, items, rates, "");
+            emit BossFightReward(_monster, items, rates);
         } else {
-            uint256[] memory bossItemsSetTwo = bossRewardSet[1];
-            uint256[] memory bossQuantitiesSetTwo = bossRateSet[1];
-            _mintBatch(_user, bossItemsSetTwo, bossQuantitiesSetTwo, "");
-            emit BossFightReward(
-                _monster,
-                bossItemsSetTwo,
-                bossQuantitiesSetTwo
-            );
+            uint256[] memory items = getDropItems(7);
+            uint256[] memory rates = getDropRates(7);
+            _mintBatch(_user, items, rates, "");
+            emit BossFightReward(_monster, items, rates);
         }
     }
 
@@ -187,9 +128,9 @@ contract Items is ERC1155, Ownable {
         view
         returns (uint256[] memory inventory)
     {
-        uint256 length = items.length;
-        uint256[] memory inventoryTemp = new uint256[](length);
-        for (uint256 i; i < items.length; ++i) {
+        uint256 _itemsAmount = uint256(itemsAmount);
+        uint256[] memory inventoryTemp = new uint256[](_itemsAmount);
+        for (uint256 i; i < _itemsAmount; ++i) {
             uint256 balance = balanceOf(_user, i);
             if (balance > 0) {
                 inventoryTemp[i] = (balanceOf(_user, i));
@@ -199,7 +140,28 @@ contract Items is ERC1155, Ownable {
     }
 
     function getItems() external view returns (uint256[] memory _items) {
-        _items = items;
+        uint256 _itemsAmount = uint256(itemsAmount);
+        _items = new uint256[](_itemsAmount);
+        for (uint256 i; i < _itemsAmount; ++i) {
+            _items[i] = i;
+        }
+    }
+
+    function addDrops(
+        uint256 _dropsId,
+        uint256[] calldata _items,
+        uint256[] calldata _rates
+    ) external onlyOwner {
+        uint256 _dropsAmount = dropsAmount;
+        Details storage details = dropsDetails[_dropsAmount];
+        for (uint256 i; i < _items.length; ++i) {
+            details.itemsAmount = uint8(_items.length);
+            details.items[i] = uint8(_items[i]);
+            details.rates[i] = uint8(_rates[i]);
+        }
+        drops[_dropsAmount] = uint8(_dropsId);
+        uint256 newAmount = _dropsAmount + 1;
+        dropsAmount = uint8(newAmount);
     }
 
     function beginnerMissionReward(
@@ -208,24 +170,20 @@ contract Items is ERC1155, Ownable {
         uint256 _odds
     ) internal {
         if (_odds <= 60 && 0 <= _odds) {
-            uint256[] memory itemsSetOne = itemSet[0];
-            uint256[] memory quantitiesSetOne = itemRateSet[0];
-            _mintBatch(_user, itemsSetOne, quantitiesSetOne, "");
-            emit BeginnerMissionReward(_monster, itemsSetOne, quantitiesSetOne);
+            uint256[] memory items = getDropItems(0);
+            uint256[] memory rates = getDropRates(0);
+            _mintBatch(_user, items, rates, "");
+            emit BeginnerMissionReward(_monster, items, rates);
         } else if (_odds <= 90 && 70 <= _odds) {
-            uint256[] memory itemsSetTwo = itemSet[1];
-            uint256[] memory quantitiesSetTwo = itemRateSet[1];
-            _mintBatch(_user, itemsSetTwo, quantitiesSetTwo, "");
-            emit BeginnerMissionReward(_monster, itemsSetTwo, quantitiesSetTwo);
+            uint256[] memory items = getDropItems(1);
+            uint256[] memory rates = getDropRates(1);
+            _mintBatch(_user, items, rates, "");
+            emit BeginnerMissionReward(_monster, items, rates);
         } else {
-            uint256[] memory itemsSetThree = itemSet[2];
-            uint256[] memory quantitiesSetThree = itemRateSet[2];
-            _mintBatch(_user, itemsSetThree, quantitiesSetThree, "");
-            emit BeginnerMissionReward(
-                _monster,
-                itemsSetThree,
-                quantitiesSetThree
-            );
+            uint256[] memory items = getDropItems(2);
+            uint256[] memory rates = getDropRates(2);
+            _mintBatch(_user, items, rates, "");
+            emit BeginnerMissionReward(_monster, items, rates);
         }
     }
 
@@ -235,32 +193,48 @@ contract Items is ERC1155, Ownable {
         uint256 _odds
     ) internal {
         if (_odds <= 60 && 0 <= _odds) {
-            uint256[] memory itemsSetFour = itemSet[3];
-            uint256[] memory quantitiesSetFour = itemRateSet[3];
-            _mintBatch(_user, itemsSetFour, quantitiesSetFour, "");
-            emit IntermediateMissionReward(
-                _monster,
-                itemsSetFour,
-                quantitiesSetFour
-            );
+            uint256[] memory items = getDropItems(3);
+            uint256[] memory rates = getDropRates(3);
+            _mintBatch(_user, items, rates, "");
+            emit IntermediateMissionReward(_monster, items, rates);
         } else if (_odds <= 90 && 70 <= _odds) {
-            uint256[] memory itemsSetFive = itemSet[4];
-            uint256[] memory quantitiesSetFive = itemRateSet[4];
-            _mintBatch(_user, itemsSetFive, quantitiesSetFive, "");
-            emit IntermediateMissionReward(
-                _monster,
-                itemsSetFive,
-                quantitiesSetFive
-            );
+            uint256[] memory items = getDropItems(4);
+            uint256[] memory rates = getDropRates(4);
+            _mintBatch(_user, items, rates, "");
+            emit IntermediateMissionReward(_monster, items, rates);
         } else {
-            uint256[] memory itemsSetSix = itemSet[5];
-            uint256[] memory quantitiesSetSix = itemRateSet[5];
-            _mintBatch(_user, itemsSetSix, quantitiesSetSix, "");
-            emit IntermediateMissionReward(
-                _monster,
-                itemsSetSix,
-                quantitiesSetSix
-            );
+            uint256[] memory items = getDropItems(5);
+            uint256[] memory rates = getDropRates(5);
+            _mintBatch(_user, items, rates, "");
+            emit IntermediateMissionReward(_monster, items, rates);
+        }
+    }
+
+    function getDropItems(uint256 _dropId)
+        internal
+        view
+        returns (uint256[] memory _items)
+    {
+        Details storage details = dropsDetails[_dropId];
+        uint256 amount = uint256(details.itemsAmount);
+        _items = new uint256[](amount);
+        for (uint256 i; i < amount; ++i) {
+            uint256 item = details.items[i];
+            _items[i] = item;
+        }
+    }
+
+    function getDropRates(uint256 _dropId)
+        internal
+        view
+        returns (uint256[] memory _rates)
+    {
+        Details storage details = dropsDetails[_dropId];
+        uint256 amount = uint256(details.itemsAmount);
+        _rates = new uint256[](amount);
+        for (uint256 i; i < amount; ++i) {
+            uint256 rate = details.rates[i];
+            _rates[i] = rate;
         }
     }
 }
