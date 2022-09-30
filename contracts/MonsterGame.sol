@@ -3,22 +3,23 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IMonster.sol";
 import "./IItems.sol";
 import "./IUsersData.sol";
 
-contract MonsterGame is ERC1155Holder {
+contract MonsterGame is ERC1155Holder, Ownable {
     struct UserDetails {
-        uint256 mission;
-        uint256 monstersAmount;
-        mapping(uint256 => uint256) monsters;
-        uint256 startTime;
+        uint8 mission;
+        uint8 monstersAmount;
+        mapping(uint256 => uint8) monsters;
+        uint16 startTime;
         address owner;
     }
 
     struct MissionDetails {
-        uint256 energy;
-        uint256 exp;
+        uint8 energy;
+        uint8 exp;
     }
 
     IMonster public monstersInterface;
@@ -26,10 +27,10 @@ contract MonsterGame is ERC1155Holder {
     IUsersData public usersDataInterface;
     IERC1155 public erc1155Interface;
 
-    uint256 internal nonce;
-    uint256 internal constant BEGINNER_MISSION_ID = 1;
-    uint256 internal constant INTERMEDIATE_MISSION_ID = 2;
-    uint256 public constant FEEDING_FEE = 0.0001 ether;
+    uint8 internal constant BEGINNER_MISSION_ID = 1;
+    uint8 internal constant INTERMEDIATE_MISSION_ID = 2;
+    uint16 internal nonce;
+    uint48 public constant FEEDING_FEE = 0.0001 ether;
 
     mapping(address => UserDetails) public monstersOnMissions;
     mapping(address => bool) public missioningStatus;
@@ -53,16 +54,16 @@ contract MonsterGame is ERC1155Holder {
     error NotValidToUsePotion(uint256 _balance, uint256 _amount);
     error MonstersAmountNotValid(uint256 _amount, uint256 _limit);
 
-    modifier isOnMission(address _user) {
-        bool status = missioningStatus[_user];
+    modifier isOnMission() {
+        bool status = missioningStatus[msg.sender];
         if (!status) {
             revert NotOnMission(status);
         }
         _;
     }
 
-    modifier isNotOnMission(address _user) {
-        bool status = missioningStatus[_user];
+    modifier isNotOnMission() {
+        bool status = missioningStatus[msg.sender];
         if (status) {
             revert IsOnMission(status);
         }
@@ -77,8 +78,8 @@ contract MonsterGame is ERC1155Holder {
         _;
     }
 
-    modifier isRegistered(address _user) {
-        usersDataInterface.checkRegister(_user);
+    modifier isRegistered() {
+        usersDataInterface.checkRegister(msg.sender);
         _;
     }
 
@@ -86,15 +87,28 @@ contract MonsterGame is ERC1155Holder {
         uint256 monsterLevel = monstersInterface.getMonsterLevel(_monster);
         uint256 total = _amount * FEEDING_FEE * monsterLevel;
         uint256 monsterEnergy = monstersInterface.getMonsterEnergy(_monster);
+        address owner = monstersInterface.monsterOwner(_monster);
         if (
             msg.value != total ||
             monsterEnergy > 100 ||
+            _amount == 0 ||
             _amount + monsterEnergy > 100 ||
-            _amount == 0
+            owner != msg.sender
         ) {
             revert NotValidToFeed(_monster, monsterEnergy, _amount);
         }
         _;
+    }
+
+    function setInterface(
+        address _monstersContract,
+        address _itemsContract,
+        address _usersDataContract
+    ) external onlyOwner {
+        monstersInterface = IMonster(_monstersContract);
+        itemsInterface = IItems(_itemsContract);
+        erc1155Interface = IERC1155(_itemsContract);
+        usersDataInterface = IUsersData(_usersDataContract);
     }
 
     function addMissionDetails(
@@ -102,13 +116,13 @@ contract MonsterGame is ERC1155Holder {
         uint256 _energy,
         uint256 _exp
     ) external {
-        missionDetails[_mission] = MissionDetails(_energy, _exp);
+        missionDetails[_mission] = MissionDetails(uint8(_energy), uint8(_exp));
     }
 
     function startMission(uint256 _mission, uint256[] calldata _monsters)
         external
-        isNotOnMission(msg.sender)
-        isRegistered(msg.sender)
+        isNotOnMission
+        isRegistered
     {
         if (_monsters.length > 6) {
             revert MonstersAmountNotValid(_monsters.length, 6);
@@ -119,16 +133,16 @@ contract MonsterGame is ERC1155Holder {
             uint256 monster = _monsters[i];
             monsterCheck(msg.sender, _mission, monster);
             monstersInterface.setStatus(monster, 1);
-            details.monsters[i] = monster;
+            details.monsters[i] = uint8(monster);
         }
-        details.mission = _mission;
-        details.startTime = block.timestamp;
+        details.mission = uint8(_mission);
+        details.startTime = uint16(block.timestamp);
         details.owner = msg.sender;
-        details.monstersAmount = _monsters.length;
+        details.monstersAmount = uint8(_monsters.length);
         missioningStatus[msg.sender] = true;
     }
 
-    function finishMission() external isOnMission(msg.sender) {
+    function finishMission() external isOnMission {
         UserDetails storage details = monstersOnMissions[msg.sender];
         uint256 mission = details.mission;
         MissionDetails memory detailsMission = missionDetails[mission];
@@ -160,7 +174,7 @@ contract MonsterGame is ERC1155Holder {
     function feedMonster(uint256 _monster, uint256 _amount)
         external
         payable
-        isRegistered(msg.sender)
+        isRegistered
         isValidToFeed(_monster, _amount)
     {
         uint256 monsterEnergy = monstersInterface.getMonsterEnergy(_monster);
@@ -171,13 +185,14 @@ contract MonsterGame is ERC1155Holder {
     function useEnergyPotion(uint256 _monster, uint256 _amount)
         external
         isNotActive(_monster)
-        isRegistered(msg.sender)
+        isRegistered
     {
+        address owner = monstersInterface.monsterOwner(_monster);
         uint256 balance = erc1155Interface.balanceOf(msg.sender, 2);
         uint256 energy = monstersInterface.getMonsterEnergy(_monster);
         uint256 energyGained = _amount * 10;
         uint256 newEnergy = energy + energyGained;
-        if (balance < _amount || newEnergy > 100) {
+        if (balance < _amount || newEnergy > 100 || owner != msg.sender) {
             revert NotValidToUsePotion(balance, _amount);
         }
         erc1155Interface.safeTransferFrom(
@@ -193,11 +208,12 @@ contract MonsterGame is ERC1155Holder {
     function useExpPotion(uint256 _monster, uint256 _amount)
         external
         isNotActive(_monster)
-        isRegistered(msg.sender)
+        isRegistered
     {
+        address owner = monstersInterface.monsterOwner(_monster);
         uint256 balance = erc1155Interface.balanceOf(msg.sender, 3);
         uint256 expEarned = _amount * 3;
-        if (balance < _amount) {
+        if (balance < _amount || owner != msg.sender) {
             revert NotValidToUsePotion(balance, _amount);
         }
         erc1155Interface.safeTransferFrom(
@@ -208,17 +224,6 @@ contract MonsterGame is ERC1155Holder {
             ""
         );
         monstersInterface.expUp(_monster, expEarned);
-    }
-
-    function setInterface(
-        address monstersContract,
-        address itemsContract,
-        address usersDataContract
-    ) public {
-        monstersInterface = IMonster(monstersContract);
-        itemsInterface = IItems(itemsContract);
-        erc1155Interface = IERC1155(itemsContract);
-        usersDataInterface = IUsersData(usersDataContract);
     }
 
     function getMonstersOnMission(address _user)
@@ -246,7 +251,7 @@ contract MonsterGame is ERC1155Holder {
         uint256 energy = monstersInterface.getMonsterEnergy(_monster);
         uint256 cooldown = monstersInterface.getMonsterCooldown(_monster);
         uint256 status = monstersInterface.getMonsterStatus(_monster);
-        address owner = monstersInterface.ownerOf(_monster);
+        address owner = monstersInterface.monsterOwner(_monster);
         if (isIntermediate && level < 2) {
             revert NotValidToIntermediate(_monster, level);
         } else if (
@@ -262,19 +267,14 @@ contract MonsterGame is ERC1155Holder {
 
     function deleteDetails(address _user) internal {
         UserDetails storage details = monstersOnMissions[_user];
+        uint256[] memory monsters = getMonstersOnMission(_user);
+        for (uint256 i; i < monsters.length; ++i) {
+            delete details.monsters[i];
+        }
         delete details.mission;
         delete details.owner;
         delete details.startTime;
         delete details.monstersAmount;
-        deleteMonsters(_user);
-    }
-
-    function deleteMonsters(address _user) internal {
-        UserDetails storage details = monstersOnMissions[_user];
-        uint256 amount = details.monstersAmount;
-        for (uint256 i; i < amount; ++i) {
-            delete details.monsters[i];
-        }
     }
 
     function randomNumber() internal returns (uint256 number) {
