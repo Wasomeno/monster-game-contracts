@@ -2,30 +2,31 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IItems.sol";
 
-contract Trader is ERC1155Holder {
+contract Trader is ERC1155Holder, Ownable {
     struct Shop {
-        uint256 item;
-        uint256 quantity;
-        uint256 price;
+        uint8 item;
+        uint8 limit;
+        uint48 price;
     }
 
     struct Trade {
-        uint256 itemTrade;
-        uint256 quantityTrade;
-        uint256 itemReceived;
-        uint256 quantityReceived;
-        uint256 limit;
+        uint8 itemTrade;
+        uint8 quantityTrade;
+        uint8 itemReceived;
+        uint8 quantityReceived;
+        uint8 limit;
     }
 
-    IItems itemInterface;
-    IERC1155 public itemNftInterface;
+    IItems public itemsInterface;
+    IERC1155 public erc1155Interface;
 
-    address OWNER;
-    uint256 tradeIds;
-    uint256[] public dailyShop;
-    uint256[] public dailyTrades;
+    uint8 internal tradesAmount;
+    uint8 internal shopItemsAmount;
+
     mapping(uint256 => Trade) public traderTrades;
     mapping(uint256 => Shop) public shopItems;
     mapping(address => mapping(uint256 => uint256)) public shopDailyLimit;
@@ -33,49 +34,45 @@ contract Trader is ERC1155Holder {
     mapping(address => uint256) public dailyShopTimeLimit;
     mapping(address => uint256) public dailyTradeTimeLimit;
 
-    constructor() {
-        OWNER = msg.sender;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == OWNER);
-        _;
-    }
-
-    function setInterface(address _items) public onlyOwner {
-        itemInterface = IItems(_items);
-        itemNftInterface = IERC1155(_items);
+    function setInterface(address _itemsContract) public onlyOwner {
+        itemsInterface = IItems(_itemsContract);
+        erc1155Interface = IERC1155(_itemsContract);
     }
 
     function addItemsToShop(
-        uint256[] calldata _itemId,
-        uint256[] calldata _limit,
-        uint256[] calldata _price
+        uint256[] calldata _items,
+        uint256[] calldata _limits,
+        uint256[] calldata _prices
     ) external onlyOwner {
-        for (uint256 i; i < _itemId.length; ++i) {
-            dailyShop.push(_itemId[i]);
-            shopItems[_itemId[i]] = (Shop(_itemId[i], _limit[i], _price[i]));
+        uint256 _shopItemsAmount = shopItemsAmount;
+        for (uint256 i; i < _items.length; ++i) {
+            Shop storage newShopItems = shopItems[_shopItemsAmount];
+            uint256 item = _items[i];
+            uint256 limit = _limits[i];
+            uint256 price = _prices[i];
+            newShopItems.item = uint8(item);
+            newShopItems.price = uint8(price);
+            newShopItems.limit = uint8(limit);
+            _shopItemsAmount++;
         }
+        shopItemsAmount = uint8(_shopItemsAmount);
     }
 
-    function addTradeToTrader(
+    function addNewTrade(
         uint256 _itemTrade,
         uint256 _quantityTrade,
         uint256 _itemReceived,
         uint256 _quantityReceived,
         uint256 _limit
     ) external onlyOwner {
-        dailyTrades.push(tradeIds);
-        traderTrades[tradeIds] = (
-            Trade(
-                _itemTrade,
-                _quantityTrade,
-                _itemReceived,
-                _quantityReceived,
-                _limit
-            )
-        );
-        tradeIds++;
+        uint256 _tradesAmount = uint256(tradesAmount);
+        Trade storage newTrades = traderTrades[_tradesAmount];
+        newTrades.itemTrade = uint8(_itemTrade);
+        newTrades.quantityTrade = uint8(_quantityTrade);
+        newTrades.itemReceived = uint8(_itemReceived);
+        newTrades.quantityReceived = uint8(_quantityReceived);
+        newTrades.limit = uint8(_limit);
+        tradesAmount = uint8(_tradesAmount + 1);
     }
 
     function resetShopTimeLimit(address _user) internal {
@@ -101,23 +98,23 @@ contract Trader is ERC1155Holder {
     }
 
     function buyItems(
-        uint256[] calldata _item,
+        uint256[] calldata _items,
         uint256[] calldata _quantity,
         address _user
     ) external payable {
-        uint256 total = getTotalPrice(_item, _quantity);
-        uint256 itemLength = _item.length;
+        uint256 total = getTotalPrice(_items, _quantity);
+        uint256 amount = _items.length;
         resetShopTimeLimit(_user);
-        checkDailyShopLimit(_item, _quantity, _user);
-        for (uint256 i; i < itemLength; ++i) {
-            uint256 item = _item[i];
+        checkDailyShopLimit(_items, _quantity, _user);
+        for (uint256 i; i < amount; ++i) {
+            uint256 item = _items[i];
             uint256 quantity = _quantity[i];
             uint256 limit = shopDailyLimit[_user][item];
             shopDailyLimit[_user][item] = quantity + limit;
         }
         triggerShopLimit(_user);
         require(msg.value >= total, "Wrong value of ether sent");
-        itemInterface.mintForShop(_user, _item, _quantity);
+        itemsInterface.mintForShop(_user, _items, _quantity);
     }
 
     function tradeItem(
@@ -129,23 +126,23 @@ contract Trader is ERC1155Holder {
         uint256 tradeQuantity = tradeDetails.quantityTrade * _quantity;
         uint256 receiveQuantity = tradeDetails.quantityReceived * _quantity;
         uint256 limit = tradeDailyLimit[_user][_tradeId];
-        resetShopTimeLimit(_user);
-        checkDailyTradeLimit(_tradeId, _quantity, _user);
-        tradeDailyLimit[_user][_tradeId] = limit + _quantity;
         require(
-            itemNftInterface.balanceOf(_user, tradeDetails.itemTrade) >
+            erc1155Interface.balanceOf(_user, tradeDetails.itemTrade) >
                 tradeQuantity,
             "Not enough items needed"
         );
+        resetShopTimeLimit(_user);
+        checkDailyTradeLimit(_tradeId, _quantity, _user);
+        tradeDailyLimit[_user][_tradeId] = limit + _quantity;
         triggerTraderLimit(_user);
-        itemNftInterface.safeTransferFrom(
+        erc1155Interface.safeTransferFrom(
             _user,
             address(this),
             tradeDetails.itemTrade,
             tradeQuantity,
             ""
         );
-        itemInterface.mintForTrade(
+        itemsInterface.mintForTrade(
             _user,
             tradeDetails.itemReceived,
             receiveQuantity
@@ -153,84 +150,86 @@ contract Trader is ERC1155Holder {
     }
 
     function getTotalPrice(
-        uint256[] calldata _item,
+        uint256[] calldata _items,
         uint256[] calldata _quantity
     ) internal view returns (uint256 total) {
-        uint256 totalTemp;
-        uint256 itemLength = _item.length;
-        for (uint256 i; i < itemLength; ++i) {
+        uint256 amount = _items.length;
+        for (uint256 i; i < amount; ++i) {
             uint256 quantity = _quantity[i];
-            uint256 itemId = _item[i];
-            uint256 price = shopItems[itemId].price;
-            totalTemp += price * quantity;
+            uint256 item = _items[i];
+            uint256 price = shopItems[item].price;
+            total += price * quantity;
         }
-        total = totalTemp;
     }
 
     function resetDailyShop(address _user) internal {
         uint256 timeLimit = dailyShopTimeLimit[_user];
+        uint256 _shopItemsAmount = shopItemsAmount;
         require(
             timeLimit <= block.timestamp && timeLimit > 0,
             "You hit your limit"
         );
         delete dailyShopTimeLimit[_user];
-        for (uint256 i; i < dailyShop.length; ++i) {
+        for (uint256 i; i < _shopItemsAmount; ++i) {
             delete shopDailyLimit[_user][i];
         }
     }
 
     function resetDailyTrade(address _user) internal {
         uint256 timeLimit = dailyTradeTimeLimit[_user];
+        uint256 _tradesAmount = tradesAmount;
         require(
             timeLimit <= block.timestamp && timeLimit > 0,
             "You hit your limit"
         );
         delete dailyTradeTimeLimit[_user];
-        for (uint256 i; i < dailyShop.length; ++i) {
+        for (uint256 i; i < _tradesAmount; ++i) {
             delete tradeDailyLimit[_user][i];
         }
     }
 
     function triggerShopLimit(address _user) internal {
-        uint256 totalLimit;
-        uint256 shopLength = dailyShop.length;
         uint256 shopTotalLimit;
-        for (uint256 i; i < shopLength; ++i) {
-            uint256 quantity = shopDailyLimit[_user][i];
-            uint256 itemId = dailyShop[i];
-            Shop memory shopItem = shopItems[itemId];
-            totalLimit += quantity;
-            shopTotalLimit += shopItem.quantity;
+        uint256 userTotalLimit;
+        uint256 _shopItemsAmount = shopItemsAmount;
+        for (uint256 i; i < _shopItemsAmount; ++i) {
+            uint256 userLimit = shopDailyLimit[_user][i];
+            Shop memory shopItem = shopItems[i];
+            userTotalLimit += userLimit;
+            shopTotalLimit += shopItem.limit;
         }
-        if (totalLimit == shopTotalLimit) {
+        if (userTotalLimit == shopTotalLimit) {
             dailyShopTimeLimit[_user] = block.timestamp + 1 days;
         }
     }
 
     function triggerTraderLimit(address _user) internal {
-        uint256 totalLimit;
-        uint256 traderTotalLimit;
-        for (uint256 i; i < tradeIds; ++i) {
-            uint256 quantity = tradeDailyLimit[_user][i];
+        uint256 tradeTotalLimit;
+        uint256 userTotalLimit;
+        uint256 _tradesAmount = tradesAmount;
+        for (uint256 i; i < _tradesAmount; ++i) {
+            uint256 userLimit = tradeDailyLimit[_user][i];
             Trade memory trade = traderTrades[i];
-            totalLimit += quantity;
-            traderTotalLimit += trade.limit;
+            userTotalLimit += userLimit;
+            tradeTotalLimit += trade.limit;
         }
-        if (totalLimit == traderTotalLimit) {
+        if (userTotalLimit == tradeTotalLimit) {
             dailyTradeTimeLimit[_user] = block.timestamp + 1 days;
         }
     }
 
     function checkDailyShopLimit(
-        uint256[] calldata _item,
+        uint256[] calldata _items,
         uint256[] calldata _quantity,
         address _user
     ) internal view {
-        uint256 itemLength = _item.length;
-        for (uint256 i; i < itemLength; ++i) {
-            uint256 quantity = shopDailyLimit[_user][i] + _quantity[i];
-            uint256 itemLimit = shopItems[i].quantity;
-            require(quantity <= itemLimit, "You hit your limit");
+        uint256 amount = _items.length;
+        for (uint256 i; i < amount; ++i) {
+            uint256 item = _items[i];
+            uint256 quantity = _quantity[i];
+            uint256 userLimitTotal = shopDailyLimit[_user][item] + quantity;
+            uint256 itemLimit = shopItems[item].limit;
+            require(userLimitTotal <= itemLimit, "You hit your limit");
         }
     }
 
@@ -247,15 +246,14 @@ contract Trader is ERC1155Holder {
     function getShopDailyLimit(address _user)
         external
         view
-        returns (uint256[] memory shoplimit)
+        returns (uint256[] memory shopLimit)
     {
-        uint256 shopLength = dailyShop.length;
-        uint256[] memory limit = new uint256[](shopLength);
-        for (uint256 i; i < shopLength; ++i) {
-            uint256 itemId = dailyShop[i];
-            limit[i] = (shopDailyLimit[_user][itemId]);
+        uint256 _shopItemsAmount = shopItemsAmount;
+        shopLimit = new uint256[](_shopItemsAmount);
+        for (uint256 i; i < _shopItemsAmount; ++i) {
+            uint256 userLimit = shopDailyLimit[_user][i];
+            shopLimit[i] = userLimit;
         }
-        shoplimit = limit;
     }
 
     function getTradeDailyLimit(address _user)
@@ -263,31 +261,33 @@ contract Trader is ERC1155Holder {
         view
         returns (uint256[] memory tradeLimit)
     {
-        uint256[] memory limit = new uint256[](tradeIds);
-        for (uint256 i; i < tradeIds; ++i) {
-            limit[i] = tradeDailyLimit[_user][i];
+        uint256 _tradesAmount = tradesAmount;
+        tradeLimit = new uint256[](_tradesAmount);
+        for (uint256 i; i < _tradesAmount; ++i) {
+            uint256 userLimit = tradeDailyLimit[_user][i];
+            tradeLimit[i] = userLimit;
         }
-        tradeLimit = limit;
     }
 
-    function getDailyShop() external view returns (Shop[] memory) {
-        uint256 shopLength = dailyShop.length;
-        Shop[] memory shop = new Shop[](shopLength);
-        for (uint256 i; i < shopLength; ++i) {
-            uint256 itemId = dailyShop[i];
-            shop[i] = shopItems[itemId];
+    function getDailyShop() external view returns (Shop[] memory dailyShop) {
+        uint256 _shopItemsAmount = shopItemsAmount;
+        dailyShop = new Shop[](_shopItemsAmount);
+        for (uint256 i; i < _shopItemsAmount; ++i) {
+            Shop memory item = shopItems[i];
+            dailyShop[i] = item;
         }
-        return shop;
     }
 
-    function getDailyTrades() external view returns (Trade[] memory) {
-        uint256 tradeLength = dailyTrades.length;
-        Trade[] memory trades = new Trade[](tradeLength);
-        for (uint256 i; i < tradeLength; ++i) {
-            uint256 tradeId = dailyTrades[i];
-            trades[i] = traderTrades[tradeId];
+    function getDailyTrades()
+        external
+        view
+        returns (Trade[] memory dailyTrades)
+    {
+        uint256 _tradesAmount = tradesAmount;
+        dailyTrades = new Trade[](_tradesAmount);
+        for (uint256 i; i < _tradesAmount; ++i) {
+            dailyTrades[i] = traderTrades[i];
         }
-        return trades;
     }
 
     receive() external payable {}
