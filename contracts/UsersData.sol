@@ -16,8 +16,8 @@ contract UsersData {
     error isRegistered(bool _status);
     error NotRegistered(bool _status);
 
-    modifier isNotRegistered(address _user) {
-        bool status = registrationStatus[_user];
+    modifier isNotRegistered() {
+        bool status = registrationStatus[msg.sender];
         if (status) {
             revert isRegistered(status);
         }
@@ -26,7 +26,7 @@ contract UsersData {
 
     function register(bytes32 _name, bytes32 _profile)
         external
-        isNotRegistered(msg.sender)
+        isNotRegistered
     {
         userDataDetails[msg.sender] = Details(msg.sender, _profile, _name);
         registrationStatus[msg.sender] = true;
