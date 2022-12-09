@@ -11,7 +11,7 @@ contract Dungeon is Ownable {
     struct Details {
         uint8 monstersAmount;
         mapping(uint256 => uint8) monsters;
-        uint16 startTime;
+        uint64 startTime;
         address owner;
     }
 
@@ -93,7 +93,7 @@ contract Dungeon is Ownable {
         }
         details.monstersAmount = uint8(_monsters.length);
         details.owner = msg.sender;
-        details.startTime = uint16(block.timestamp);
+        details.startTime = uint64(block.timestamp);
         dungeoningStatus[msg.sender] = true;
     }
 
@@ -102,9 +102,9 @@ contract Dungeon is Ownable {
         uint256[] memory monsters = getMonstersOnDungeon(msg.sender);
         uint256 expEarned = 8;
         uint256 elapsedTime = details.startTime + 30 minutes;
-        if (elapsedTime > block.timestamp) {
-            revert NotValidToFinishDungeon(elapsedTime, block.timestamp);
-        }
+        // if (elapsedTime > block.timestamp) {
+        //     revert NotValidToFinishDungeon(elapsedTime, block.timestamp);
+        // }
         for (uint256 i; i < monsters.length; ++i) {
             uint256 monster = monsters[i];
             uint256 energy = monstersInterface.getMonsterEnergy(monster);

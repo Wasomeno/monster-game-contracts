@@ -59,25 +59,29 @@ const Dungeon = ({ account, setAccount }) => {
             width={1000}
             height={window.innerHeight}
           />
-          <div id="dungeon-buttons" className="row justify-content-center">
-            <div className="col-3">
-              <button
-                id="dungeon-button"
-                className="btn btn-primary"
-                onClick={() => setShowDungeon(true)}
-              >
-                Dungeon
-              </button>
-            </div>
-            <div className="col-3">
-              <button
-                id="missions-button"
-                className="btn btn-primary"
-                onClick={() => setShowMission(true)}
-              >
-                Missions
-              </button>
-            </div>
+          <div className="col-2">
+            <button
+              id="dungeon-button"
+              className="btn btn-primary"
+              onClick={() => setShowDungeon(true)}
+            >
+              Dungeon
+            </button>
+          </div>
+          <div className="col-2">
+            <button
+              id="missions-button"
+              className="btn btn-primary d-flex justify-content-center align-items-center text-center"
+              onClick={() => setShowMission(true)}
+            >
+              <img
+                src="sword_icon.png"
+                className="p-1"
+                width={"35px"}
+                alt="sword-icon"
+              />
+              Missions
+            </button>
           </div>
           <DungeonModal
             showDungeon={showDungeon}
@@ -87,7 +91,7 @@ const Dungeon = ({ account, setAccount }) => {
           />
         </>
       ) : (
-        <NotConnected />
+        <NotConnected account={account} setAccount={setAccount} />
       )}
     </motion.div>
   );

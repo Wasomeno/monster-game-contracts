@@ -4,7 +4,8 @@ import "bootstrap";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import CityRoutes from "./Routes";
 import { useState } from "react";
-import UtilityNavigation from "./UtilityNavigation";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   const [account, setAccount] = useState([]);
@@ -13,8 +14,8 @@ function App() {
     <div className="App vh-100 bg-dark">
       <BrowserRouter>
         <CityRoutes account={account} setAccount={setAccount} />
-        {isConnected ? <UtilityNavigation /> : null}
       </BrowserRouter>
+      <ToastContainer position="bottom-center" closeOnClick={false} />
     </div>
   );
 }

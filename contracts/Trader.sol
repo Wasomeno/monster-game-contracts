@@ -10,7 +10,7 @@ contract Trader is ERC1155Holder, Ownable {
     struct Shop {
         uint8 item;
         uint8 limit;
-        uint48 price;
+        uint64 price;
     }
 
     struct Trade {
@@ -51,7 +51,7 @@ contract Trader is ERC1155Holder, Ownable {
             uint256 limit = _limits[i];
             uint256 price = _prices[i];
             newShopItems.item = uint8(item);
-            newShopItems.price = uint8(price);
+            newShopItems.price = uint64(price);
             newShopItems.limit = uint8(limit);
             _shopItemsAmount++;
         }

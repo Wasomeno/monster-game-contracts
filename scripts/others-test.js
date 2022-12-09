@@ -1,3 +1,4 @@
+const { BigNumber } = require("ethers");
 const hre = require("hardhat");
 
 async function main() {
@@ -36,10 +37,22 @@ async function main() {
   await dungeon.setInterface(monster.address, items.address);
   await nursery.setInterface(monster.address, items.address);
 
-  // console.log("Monster NFT deployed to:", monster.address);
-  // console.log("Monster Game deployed to:", monsterGame.address);
-  // console.log("Items deployed to:", items.address);
+  let shopItems = [];
+  shopItems.push(BigNumber.from(0));
+  shopItems.push(BigNumber.from(1));
+  shopItems.push(BigNumber.from(2));
+  let limits = [];
+  limits.push(BigNumber.from(3));
+  limits.push(BigNumber.from(4));
+  limits.push(BigNumber.from(5));
 
+  let prices = [];
+  prices.push(hre.ethers.utils.parseEther("0.00004"));
+  prices.push(hre.ethers.utils.parseEther("0.0002"));
+  prices.push(hre.ethers.utils.parseEther("0.00001"));
+
+  await trader.connect(owner).addItemsToShop(shopItems, limits, prices);
+  await trader.connect(owner).addTradeToTrader(0, 1, 3, 2, 5);
   console.log("===Mint Monster NFT======");
 
   const price = (3 * 0.002).toString();
@@ -81,29 +94,37 @@ async function main() {
 
   console.log("User 1 inventory after dungeon: ( " + inventory0 + " )");
 
-  // console.log("");
-  // console.log("=== Send Monster To Nursery ========");
+  console.log("");
+  console.log("=== Send Monster To Nursery ========");
 
-  // console.log("Sending monster to nursery.....");
-  // console.log("");
+  console.log("Sending monster to nursery.....");
+  console.log("");
 
-  // await nursery.putOnNursery(0, user1.address, 3);
-  // await nursery.goBackHome(0, user1.address);
+  await nursery.putOnNursery(0, user1.address, 3);
+  await nursery.goBackHome(0, user1.address);
 
-  // const monsterAfterNursery = await monster.monsterStats(0);
+  const monsterAfterNursery = await monster.monsterStats(0);
 
-  // console.log("Monster 0 stats after nursery : " + monsterAfterNursery);
-  // console.log("");
+  console.log("Monster 0 stats after nursery : " + monsterAfterNursery);
+  console.log("");
 
   console.log("=== Buy and Trade items on Trader ===========");
 
-  await trader.buyItem([0, 1], [2, 2], user1.address, {
-    value: hre.ethers.utils.parseEther("0.0004"),
+  const item0 = await trader.shopItems(0);
+  const item1 = await trader.shopItems(1);
+  const item2 = await trader.shopItems(2);
+  const total = item0.price * 3 + item1.price * 4 + item2.price * 5;
+  await trader.buyItems([0, 1, 2], [3, 4, 5], user1.address, {
+    value: total,
   });
 
-  await items.connect(user1).setApprovalForAll(trader.address, true);
-  await trader.connect(user1).tradeItem(0, 1, user1.address);
+  await trader.connect(user1).tradeItem(0, 5, user1.address);
   const inventory = await items.getInventory(user1.getAddress());
+
+  const dailyLimit = await trader.getTradeDailyLimit(user1.getAddress());
+  const dailyTimeLimit = await trader.dailyTradeTimeLimit(user1.getAddress());
+  console.log(dailyLimit.toString());
+  console.log(dailyTimeLimit.toString());
 
   console.log("");
 

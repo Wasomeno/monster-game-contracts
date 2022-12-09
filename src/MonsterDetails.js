@@ -181,7 +181,7 @@ const MonsterDetails = ({ tokenId, setShowDetails }) => {
                         </h5>
                       ) : (
                         <h5 className="m-0 text-center" id="modal-title">
-                          Nothing
+                          Inactive
                         </h5>
                       )}
                     </div>
@@ -194,7 +194,9 @@ const MonsterDetails = ({ tokenId, setShowDetails }) => {
                     </div>
                     <div className="col">
                       <h5 className="m-0 text-center" id="modal-title">
-                        {details.cooldown}
+                        {details.cooldown > Date.now() / 1000
+                          ? "On Cooldown"
+                          : "Cooldown finished"}
                       </h5>
                     </div>
                   </div>

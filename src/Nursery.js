@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import NotConnected from "./NotConnected";
 import NurseryModal from "./NurseryModal";
+import SmelterModal from "./SmelterModal";
 
 const Nursery = ({ account, setAccount }) => {
   const isConnected = Boolean(account[0]);
   const [showNursery, setShowNursery] = useState(false);
-  const [showShop, setShowShop] = useState(false);
+  const [showSmelter, setShowSmelter] = useState(false);
   const [image, setImage] = useState(null);
   const canvasRef = useRef(null);
 
@@ -62,6 +63,7 @@ const Nursery = ({ account, setAccount }) => {
           <div id="nursery-buttons" className="row justify-content-center">
             <div className="col-3">
               <button
+                id="nursery-button"
                 className="btn btn-primary"
                 onClick={() => setShowNursery(true)}
               >
@@ -70,18 +72,21 @@ const Nursery = ({ account, setAccount }) => {
             </div>
             <div className="col-3">
               <button
+                id="smelter-button"
                 className="btn btn-primary"
-                onClick={() => setShowShop(true)}
+                onClick={() => setShowSmelter(true)}
               >
-                Shop
+                Smelter
               </button>
             </div>
           </div>
           <NurseryModal
             showNursery={showNursery}
-            showShop={showShop}
             setShowNursery={setShowNursery}
-            setShowShop={setShowShop}
+          />
+          <SmelterModal
+            showSmelter={showSmelter}
+            setShowSmelter={setShowSmelter}
           />
         </>
       ) : (

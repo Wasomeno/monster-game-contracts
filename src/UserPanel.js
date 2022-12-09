@@ -33,7 +33,7 @@ const UserPanel = ({ account }) => {
     <>
       <div
         id="user-frame"
-        className="h-50 d-flex flex-column justify-content-top align-items-center rounded"
+        className="h-50 d-flex flex-column justify-content-top align-items-center rounded border border-2 border-dark"
         style={{ backgroundColor: "#D8CCA3" }}
       >
         <h5 id="modal-title" className="p-1">

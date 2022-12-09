@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.0 <0.9.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IMonster.sol";
 import "./IUsersData.sol";
 
-contract Nursery {
+contract Nursery is Ownable {
     struct Details {
         address owner;
-        uint256 monstersAmount;
-        mapping(uint256 => uint256) monsters;
-        uint256 duration;
-        uint256 startTime;
+        uint8 monstersAmount;
+        mapping(uint256 => uint8) monsters;
+        uint32 duration;
+        uint64 startTime;
     }
 
-    IMonster monsterInterface;
-    IUsersData usersDataInterface;
+    IMonster public monstersInterface;
+    IUsersData public usersDataInterface;
     uint256 public RESTING_FEE = 0.001 ether;
 
     mapping(address => Details) public monstersOnNursery;
@@ -29,32 +30,40 @@ contract Nursery {
     error NotValidToFinishRest(uint256 _timeElapsed, uint256 _timeNow);
     error MonstersAmountNotValid(uint256 _amount, uint256 _limit);
 
-    modifier isResting(address _user) {
-        bool status = restingStatus[_user];
+    modifier isResting() {
+        bool status = restingStatus[msg.sender];
         if (!status) {
             revert NotResting(status);
         }
         _;
     }
 
-    modifier isNotResting(address _user) {
-        bool status = restingStatus[_user];
+    modifier isNotResting() {
+        bool status = restingStatus[msg.sender];
         if (status) {
             revert IsResting(status);
         }
         _;
     }
 
-    modifier isRegistered(address _user) {
-        usersDataInterface.checkRegister(_user);
+    modifier isRegistered() {
+        usersDataInterface.checkRegister(msg.sender);
         _;
+    }
+
+    function setInterface(address _monsterContract, address _usersDataContract)
+        external
+        onlyOwner
+    {
+        monstersInterface = IMonster(_monsterContract);
+        usersDataInterface = IUsersData(_usersDataContract);
     }
 
     function restMonsters(uint256[] calldata _monsters, uint256 _duration)
         external
         payable
-        isRegistered(msg.sender)
-        isNotResting(msg.sender)
+        isRegistered
+        isNotResting
     {
         if (_monsters.length > 6) {
             revert MonstersAmountNotValid(_monsters.length, 6);
@@ -66,23 +75,24 @@ contract Nursery {
         }
         for (uint256 i; i < _monsters.length; ++i) {
             uint256 monster = _monsters[i];
-            uint256 energy = monsterInterface.getMonsterEnergy(monster);
-            uint256 status = monsterInterface.getMonsterStatus(monster);
+            uint256 energy = monstersInterface.getMonsterEnergy(monster);
+            uint256 status = monstersInterface.getMonsterStatus(monster);
             uint256 newEnergy = _duration * 10 + energy;
-            if (status != 0 || newEnergy > 100) {
+            address owner = monstersInterface.monsterOwner(monster);
+            if (status != 0 || owner != msg.sender || newEnergy > 100) {
                 revert NotValidToRest(monster, _duration, status);
             }
-            monsterInterface.setStatus(monster, 2);
-            details.monsters[i] = monster;
+            monstersInterface.setStatus(monster, 2);
+            details.monsters[i] = uint8(monster);
         }
-        details.duration = _duration;
-        details.monstersAmount = _monsters.length;
+        details.duration = uint32(_duration * 1 hours);
+        details.monstersAmount = uint8(_monsters.length);
         details.owner = msg.sender;
-        details.startTime = block.timestamp;
+        details.startTime = uint64(block.timestamp);
         restingStatus[msg.sender] = true;
     }
 
-    function finishResting() external isResting(msg.sender) {
+    function finishResting() external isResting {
         Details storage details = monstersOnNursery[msg.sender];
         uint256[] memory monsters = getRestingMonsters(msg.sender);
         uint256 startTime = details.startTime;
@@ -93,17 +103,13 @@ contract Nursery {
         }
         for (uint256 i; i < monsters.length; ++i) {
             uint256 monster = monsters[i];
-            uint256 energy = monsterInterface.getMonsterEnergy(monster);
-            uint256 newEnergy = (duration * 10) + energy;
-            monsterInterface.setEnergy(monster, newEnergy);
-            monsterInterface.setStatus(monster, 0);
+            uint256 energy = monstersInterface.getMonsterEnergy(monster);
+            uint256 newEnergy = ((duration / 1 hours) * 10) + energy;
+            monstersInterface.setEnergy(monster, newEnergy);
+            monstersInterface.setStatus(monster, 0);
         }
         deleteDetails(msg.sender);
         restingStatus[msg.sender] = false;
-    }
-
-    function setInterface(address _monsterNFT) public {
-        monsterInterface = IMonster(_monsterNFT);
     }
 
     function getRestingMonsters(address _user)

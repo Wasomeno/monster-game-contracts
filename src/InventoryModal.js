@@ -3,11 +3,13 @@ import { ethers } from "ethers";
 import ReactDom from "react-dom";
 import { motion } from "framer-motion";
 import ItemsABI from "../src/api/Items.json";
+import MoonLoader from "react-spinners/MoonLoader";
 
 const ItemsContract = "0x633c04c362381BbD1C9B8762065318Cb4F207989";
 
 function InventoryModal({ showInventory, setShowInventory }) {
   const [inventory, setInventory] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
@@ -18,9 +20,11 @@ function InventoryModal({ showInventory, setShowInventory }) {
   );
 
   async function getInventory() {
+    setLoading(true);
     await itemsContract.getInventory(signer.getAddress()).then((response) => {
       setInventory(response);
     });
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -33,7 +37,6 @@ function InventoryModal({ showInventory, setShowInventory }) {
       <motion.div
         id="modal-screen"
         className="h-100 w-100 bg-dark bg-opacity-75"
-        onClick={() => setShowInventory(false)}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -48,19 +51,36 @@ function InventoryModal({ showInventory, setShowInventory }) {
         transition={{ type: "tween", duration: 0.25 }}
       >
         <div className="row justify-content-center align-items-center">
-          <h2 className="text-center p-3" id="modal-title">
-            Inventory
-          </h2>
+          <div className="col-4">
+            <img
+              src="back_icon.png"
+              alt="back-icon"
+              width={"14%"}
+              onClick={() => setShowInventory(false)}
+            />
+          </div>
+          <div className="col-4">
+            <h2 className="text-center p-3" id="modal-title">
+              Inventory
+            </h2>
+          </div>
+          <div className="col-4" />
         </div>
-        <div className="row justify-content-center p-3">
-          {inventory.map((item, index) =>
-            item.toString() === "0" ? (
-              <></>
-            ) : (
+        <div className="d-flex flex-wrap justify-content-center p-3">
+          {loading ? (
+            <MoonLoader size={50} loading={loading} />
+          ) : inventory.length < 1 ? (
+            <h5 className="m-0" id="modal-title">
+              No items in inventory
+            </h5>
+          ) : (
+            inventory.map((item, index) => (
               <>
                 <div
-                  className="card col-2 mx-1 d-flex flex-column justify-content-center align-items-center shadow-sm"
+                  id="inventory-card"
+                  className="card col-4 col-sm-2 col-lg-2 m-1 p-2 d-flex flex-column justify-content-center align-items-center"
                   key={index}
+                  style={{ backgroundColor: "#D8CCA3" }}
                 >
                   <div className="align-self-end p-2">
                     <h5 className="m-0" id="modal-title">
@@ -90,7 +110,7 @@ function InventoryModal({ showInventory, setShowInventory }) {
                   </div>
                 </div>
               </>
-            )
+            ))
           )}
         </div>
       </motion.div>

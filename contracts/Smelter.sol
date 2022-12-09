@@ -9,7 +9,7 @@ import "./IUsersData.sol";
 contract Smelter is ERC1155Holder, Ownable {
     struct Details {
         uint16 quantity;
-        uint16 startTime;
+        uint64 startTime;
     }
 
     IERC1155 public itemInterface;
@@ -28,7 +28,7 @@ contract Smelter is ERC1155Holder, Ownable {
 
     modifier isSmelting() {
         bool status = smeltingStatus[msg.sender];
-        if (!status) {
+        if (status) {
             revert NotSmelting(status);
         }
         _;
@@ -36,7 +36,7 @@ contract Smelter is ERC1155Holder, Ownable {
 
     modifier isNotSmelting() {
         bool status = smeltingStatus[msg.sender];
-        if (status) {
+        if (!status) {
             revert IsSmelting(status);
         }
         _;
@@ -71,16 +71,15 @@ contract Smelter is ERC1155Holder, Ownable {
         );
         smeltDetails[msg.sender] = Details(
             uint16(_quantity),
-            uint16(block.timestamp)
+            uint64(block.timestamp)
         );
+        smeltingStatus[msg.sender] = true;
         emit Smelt(_quantity, block.timestamp);
     }
 
     function finishSmelting() external isSmelting {
-        (uint256 quantity, uint256 start) = (
-            smeltDetails[msg.sender].quantity,
-            smeltDetails[msg.sender].startTime
-        );
+        uint256 quantity = smeltDetails[msg.sender].quantity;
+        uint256 startTime = smeltDetails[msg.sender].startTime;
         uint256 time = start + (quantity * 15 minutes);
         uint256 reward = quantity * 5;
         if (time > block.timestamp) {

@@ -20,34 +20,38 @@
   width: 100%;
   height: 100%;
   position: absolute;
-  z-index: 2;
+  z-index: 7;
   top: 0;
+}
+
+#back-map-button {
+  position: absolute;
+  z-index: 8;
+  bottom: 5%;
+  left: 3%;
+  text-decoration: none;
 }
 
 #map-button {
   font-size: 22px;
   font-family: Monogram;
+  border: 3px solid black;
 }
 
-.btn {
-  box-shadow: 2px 2px 2px 0px black;
-}
-
-#navigation {
-  height: 10vh;
-  width: 100vw;
+#user-frame {
   position: absolute;
-  z-index: 6;
-  top: 0;
-  color: white;
+  z-index: 8;
+  width: 15%;
+  top: 1%;
+  left: 1%;
 }
 
-#navigation > .col-2:nth-child(1) {
-  z-index: 11;
-}
-
-#navigation > .col-2:nth-child(2) {
-  z-index: 11;
+#user-image {
+  width: 30%;
+  height: 20%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border: 2px solid black;
 }
 
 #connect-button {
@@ -62,6 +66,9 @@
 #back-button {
   color: white;
   text-decoration: none;
+  font-family: Monogram;
+  font-size: 24px;
+  border: 2px solid white;
 }
 
 #map-buttons > .col-4:nth-child(1) {
@@ -116,61 +123,38 @@
   position: relative;
 }
 
-#dungeon-buttons {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  z-index: 2;
-  top: 0;
-}
-
-#dungeon-buttons > .col-3:nth-child(1) {
-  position: absolute;
-  right: 15.5%;
-  bottom: 52%;
-  transform: translate(50%, -50%);
-}
-
-#dungeon-buttons > .col-3:nth-child(2) {
-  position: absolute;
-  left: 0%;
-  bottom: 52%;
-  transform: translate(50%, -50%);
-}
-
 #dungeon-button {
   font-size: 22px;
   font-family: Monogram;
+  position: absolute;
+  right: 51.5%;
+  bottom: 47%;
+  transform: translate(50%, -50%);
 }
 
 #missions-button {
   font-size: 22px;
   font-family: Monogram;
-}
-
-#hall-container {
-  position: relative;
-}
-
-#hall-buttons {
-  width: 100%;
-  height: 100%;
   position: absolute;
-  z-index: 2;
-  top: 0;
-}
-
-#hall-buttons > .col-3:nth-child(1) {
-  position: absolute;
-  left: 0%;
-  bottom: 52%;
+  right: 40%;
+  bottom: 50%;
   transform: translate(50%, -50%);
+}
+
+#beginner-mission-button {
+  font-size: 22px;
+  font-family: Monogram;
+}
+
+#intermediate-mission-button {
+  font-size: 22px;
+  font-family: Monogram;
 }
 
 #hall-buttons > .col-3:nth-child(2) {
   position: absolute;
-  right: 30.5%;
-  bottom: 52%;
+  right: 29.5%;
+  bottom: 42%;
   transform: translate(50%, -50%);
 }
 
@@ -188,25 +172,47 @@
 
 #nursery-buttons > .col-3:nth-child(1) {
   position: absolute;
-  left: 0%;
-  bottom: 52%;
+  left: 2%;
+  bottom: 45%;
   transform: translate(50%, -50%);
 }
 
 #nursery-buttons > .col-3:nth-child(2) {
   position: absolute;
-  right: 30.5%;
-  bottom: 52%;
+  right: 33.5%;
+  bottom: 43%;
   transform: translate(50%, -50%);
+}
+
+#nursery-button {
+  font-size: 22px;
+  font-family: Monogram;
+}
+
+#smelter-button {
+  font-size: 22px;
+  font-family: Monogram;
 }
 
 #trader-button {
   font-size: 22px;
   font-family: Monogram;
+  position: absolute;
+  left: 23%;
+  bottom: 45%;
+  transform: translate(50%, -50%);
 }
 
 #shop-button {
   font-size: 22px;
+  font-family: Monogram;
+  position: absolute;
+  right: 32.5%;
+  bottom: 42%;
+  transform: translate(50%, -50%);
+}
+
+#text {
   font-family: Monogram;
 }
 
@@ -220,10 +226,10 @@
 #modal-screen {
   transition: 0.25s;
   position: absolute;
-  z-index: 5;
-  top: 50%;
-  right: 50%;
-  transform: translate(50%, -50%);
+  z-index: 9;
+  top: 50.2%;
+  right: 50.1%;
+  transform: translate(50.1%, -50.1%);
 }
 
 #bag-container {
@@ -232,32 +238,38 @@
   right: 0%;
 }
 
-#utility-navbar {
-  position: absolute;
-  z-index: 8;
-  bottom: 0;
-  margin: 10px;
+#monsters-container {
+  overflow: scroll;
+  max-height: 30rem;
 }
 
 #shop-modal {
-  background-image: url("../public/modal_GUI.png");
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
+  overflow: hidden;
   transition: 0.25s;
   position: absolute;
-  z-index: 5;
+  z-index: 10;
   top: 50%;
   right: 50%;
   transform: translate(50%, -50%);
-  background-color: aliceblue;
+  background-color: #eddfb3;
+  border-radius: 10px;
+  border: 5px solid #632626;
 }
 
 #item-card {
-  background-image: url("../public/item_frame.png");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 102% 102%;
+  transition: 0.25s;
+  border: 1px solid black;
+  background-color: #ffebc1;
+}
+
+#item-card-active {
+  transition: 0.25s;
+  border: 3px solid black;
+  background-color: #ffebc1;
+}
+
+#inventory-card {
+  border: 2px solid black;
 }
 
 @font-face {

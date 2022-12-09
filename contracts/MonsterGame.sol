@@ -13,7 +13,7 @@ contract MonsterGame is ERC1155Holder, Ownable {
         uint8 mission;
         uint8 monstersAmount;
         mapping(uint256 => uint8) monsters;
-        uint16 startTime;
+        uint64 startTime;
         address owner;
     }
 
@@ -127,7 +127,6 @@ contract MonsterGame is ERC1155Holder, Ownable {
         if (_monsters.length > 6) {
             revert MonstersAmountNotValid(_monsters.length, 6);
         }
-        require(_monsters.length <= 6, "Above limit");
         UserDetails storage details = monstersOnMissions[msg.sender];
         for (uint256 i; i < _monsters.length; ++i) {
             uint256 monster = _monsters[i];
@@ -136,7 +135,7 @@ contract MonsterGame is ERC1155Holder, Ownable {
             details.monsters[i] = uint8(monster);
         }
         details.mission = uint8(_mission);
-        details.startTime = uint16(block.timestamp);
+        details.startTime = uint64(block.timestamp);
         details.owner = msg.sender;
         details.monstersAmount = uint8(_monsters.length);
         missioningStatus[msg.sender] = true;
@@ -149,9 +148,9 @@ contract MonsterGame is ERC1155Holder, Ownable {
         uint256[] memory monsters = getMonstersOnMission(msg.sender);
         uint256 startTime = details.startTime;
         uint256 elapsedTime = startTime + 15 minutes;
-        if (elapsedTime > block.timestamp) {
-            revert NotValidToFinishMission(elapsedTime);
-        }
+        // if (elapsedTime > block.timestamp) {
+        //     revert NotValidToFinishMission(elapsedTime);
+        // }
         for (uint256 i; i < monsters.length; ++i) {
             uint256 monster = monsters[i];
             uint256 energy = monstersInterface.getMonsterEnergy(monster);

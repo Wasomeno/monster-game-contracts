@@ -5,8 +5,7 @@ import Nursery from "./Nursery";
 import CityHall from "./CityHall";
 import Altar from "./Altar";
 import Map from "./Map";
-import Navbar from "./Navbar";
-import UtilityNavigation from "./UtilityNavigation";
+import Navigations from "./Navigations";
 import { AnimatePresence } from "framer-motion";
 
 const CityRoutes = ({ account, setAccount }) => {
@@ -16,7 +15,7 @@ const CityRoutes = ({ account, setAccount }) => {
       <Routes location={location} key={location.pathname}>
         <Route
           path="/"
-          element={<Navbar account={account} setAccount={setAccount} />}
+          element={<Navigations account={account} setAccount={setAccount} />}
         >
           <Route
             index

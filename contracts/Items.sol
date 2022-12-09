@@ -3,6 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "hardhat/console.sol";
 
 contract Items is ERC1155, Ownable {
     struct Details {
@@ -95,9 +96,9 @@ contract Items is ERC1155, Ownable {
     ) external isApproved(msg.sender) {
         if (_mission != 2) {
             beginnerMissionReward(_monster, _user, _odds);
+        } else {
+            intermediateMissionReward(_monster, _user, _odds);
         }
-
-        intermediateMissionReward(_monster, _user, _odds);
     }
 
     function bossFightReward(
@@ -110,11 +111,17 @@ contract Items is ERC1155, Ownable {
             uint256[] memory items = getDropItems(6);
             uint256[] memory rates = getDropRates(6);
             _mintBatch(_user, items, rates, "");
+            for (uint256 i; i < items.length; ++i) {
+                console.log(_monster, items[i], rates[i]);
+            }
             emit BossFightReward(_monster, items, rates);
         } else {
             uint256[] memory items = getDropItems(7);
             uint256[] memory rates = getDropRates(7);
             _mintBatch(_user, items, rates, "");
+            for (uint256 i; i < items.length; ++i) {
+                console.log(_monster, items[i], rates[i]);
+            }
             emit BossFightReward(_monster, items, rates);
         }
     }

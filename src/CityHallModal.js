@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import ReactDom from "react-dom";
 import TraderABI from "./api/Trader.json";
 import ItemsABI from "./api/Items.json";
+import { toast } from "react-toastify";
 import { BigNumber, ethers, Signer } from "ethers";
 
 const TraderContract = "0x3CCEc613890E907ACF32a8Eb4DbD18DB700C4b64";
@@ -59,6 +60,7 @@ const CityHallModal = ({
     const itemBigNumb = BigNumber.from(item);
     bagTemp.push({ itemBigNumb, price, quantity });
     setBag(bagTemp);
+    toast.success(item + " added to bag");
   };
 
   function getTotal() {
@@ -206,7 +208,7 @@ const CityHallModal = ({
                     Item Details
                   </h4>
                   <div className="d-flex flex-column justify-content-center align-items-center">
-                    <h5>
+                    <h3 style={{ fontFamily: "Monogram" }}>
                       {dailyShop[activeItem].item.toString() === "0"
                         ? "Gold Coins"
                         : dailyShop[activeItem].item.toString() === "1"
@@ -218,7 +220,7 @@ const CityHallModal = ({
                         : dailyShop[activeItem].item.toString() === "4"
                         ? "Token Crystal"
                         : ""}{" "}
-                    </h5>
+                    </h3>
                     <img
                       src={dailyShop[activeItem].item.toString() + ".png"}
                       width={"80px"}
@@ -226,7 +228,7 @@ const CityHallModal = ({
                       alt="shop-item-img"
                       style={{ backgroundColor: "whitesmoke" }}
                     />
-                    <div className="d-flex justify-content-around align-items-center">
+                    <div className="d-flex justify-content-between align-items-center">
                       <div className="col-4 d-flex justify-content-center align-items-center">
                         <button
                           className="btn btn-danger text-center"
@@ -248,17 +250,21 @@ const CityHallModal = ({
                         </button>
                       </div>
                       <div className="col-6">
-                        <h5 className="text-center">
+                        <h4
+                          className="text-center"
+                          style={{ fontFamily: "Monogram" }}
+                        >
                           {quantity[activeItem] *
                             ethers.utils.formatUnits(
                               dailyShop[activeItem].price,
                               "gwei"
                             )}{" "}
-                          Ether
-                        </h5>
+                          ETH
+                        </h4>
                       </div>
                     </div>
                     <button
+                      id="modal-title"
                       className="btn btn-primary m-3"
                       onClick={() =>
                         addToBag(

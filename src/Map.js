@@ -32,7 +32,7 @@ const Map = ({ account, setAccount }) => {
   useEffect(() => {
     if (image && canvasRef) {
       const canvas = canvasRef.current;
-      canvas.width = 1280;
+      canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       const c = canvas.getContext("2d");
       var wrh = image.width / image.height;
@@ -87,7 +87,7 @@ const Map = ({ account, setAccount }) => {
               }}
             >
               <Link id="map-button" className="btn btn-primary" to={"/dungeon"}>
-                Dungeon
+                Dungeon & Missions
               </Link>
             </motion.div>
             <motion.div
@@ -101,7 +101,7 @@ const Map = ({ account, setAccount }) => {
               }}
             >
               <Link id="map-button" className="btn btn-primary" to={"/nursery"}>
-                Nursery
+                Nursery & Smelter
               </Link>
             </motion.div>
             <motion.div
@@ -121,7 +121,7 @@ const Map = ({ account, setAccount }) => {
           </div>
         </>
       ) : (
-        <NotConnected />
+        <NotConnected account={account} setAccount={setAccount} />
       )}
     </motion.div>
   );

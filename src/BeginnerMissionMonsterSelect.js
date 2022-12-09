@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ethers } from "ethers";
+import { toast } from "react-toastify";
 import MonsterABI from "../src/api/Monsters.json";
 import MoonLoader from "react-spinners/MoonLoader";
 
@@ -25,16 +26,16 @@ const BeginnerMissionMonsterSelect = ({
   );
 
   async function getMonsters() {
-    let monstersTemp = [];
     setLoadingMonster(true);
-    const myMonsters = await monsterContract.getMyMonster(signer.getAddress());
-    for (let i = 0; i < myMonsters.length; i++) {
-      const status = await monsterContract.getMonsterStatus(myMonsters[i]);
-      if (status.toString() === "0") {
-        monstersTemp.push(myMonsters[i]);
+    await monsterContract.getMyMonster(signer.getAddress()).then((monsters) => {
+      for (let i = 0; i < monsters.length; i++) {
+        monsterContract.getMonsterStatus(monsters[i]).then((status) => {
+          if (status.toString() === "0") {
+            setMonsters((currentMonsters) => [...currentMonsters, monsters[i]]);
+          }
+        });
       }
-    }
-    setMonsters(monstersTemp);
+    });
     setLoadingMonster(false);
   }
 
@@ -46,6 +47,9 @@ const BeginnerMissionMonsterSelect = ({
       for (let i = 0; i < monsterSelected.length; i++) {
         if (monster === monsterSelected[i]) {
           result = false;
+          toast.error("Monster #" + monster + " already selected", {
+            autoClose: 2000,
+          });
         }
       }
       return result;
@@ -78,16 +82,16 @@ const BeginnerMissionMonsterSelect = ({
   return (
     <>
       <motion.div
-        className="container w-75 h-75"
+        className="container-fluid"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ type: "tween", duration: 0.25 }}
       >
-        <div className="row justify-content-center">
+        <div className="row justify-content-center align-items-start">
           <div className="col-8">
             <h4 id="modal-title" className="text-center">
-              Your Monsters
+              Select Your Monsters
             </h4>
             <div
               id="monsters-container"
@@ -111,7 +115,7 @@ const BeginnerMissionMonsterSelect = ({
                 ) : (
                   monsters.map((monster, index) => (
                     <div
-                      className="card col-4 m-2 d-flex justify-content-center align-items-center shadow-sm"
+                      className="card col-3 m-2 d-flex justify-content-center align-items-center shadow-sm"
                       key={index}
                       style={{ backgroundColor: "#D8CCA3" }}
                       onClick={() => selectMonster(index)}
@@ -130,8 +134,8 @@ const BeginnerMissionMonsterSelect = ({
             </div>
           </div>
           <div className="col">
-            <div className="row justify-content-center align-items-center">
-              <h4 className="p-3 text-center" id="modal-title">
+            <div className="row justify-content-center align-items-start">
+              <h4 className="text-center" id="modal-title">
                 {monsterSelected.length} Monster Selected
               </h4>
             </div>

@@ -48,16 +48,27 @@ const AltarModal = ({ showAltar, setShowAltar }) => {
       />
       <motion.div
         id="shop-modal"
-        className="container w-50 h-50"
+        className="container w-75 h-75"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ type: "tween", duration: 0.5 }}
       >
+        <img
+          src="/back_icon.png"
+          onClick={() => setShowAltar(false)}
+          width={"45px"}
+          alt="back-img"
+        />
         <div className="row justify-content-center">
-          <h2 id="modal-title" className="text-center p-3">
+          <h2 id="modal-title" className="text-center m-0 p-0">
             Summoning Altar
           </h2>
+        </div>
+        <div className="row justify-content-center align-items-center">
+          <div className="col-6">
+            <img src="/summoning-altar.png" alt="altar-icon" width={"100%"} />
+          </div>
         </div>
         <div className="d-flex justify-content-center m-2">
           <button className="btn btn-danger" onClick={() => decrement()}>

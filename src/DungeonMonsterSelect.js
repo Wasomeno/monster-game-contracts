@@ -4,6 +4,7 @@ import { ethers } from "ethers";
 import { toast } from "react-toastify";
 import MonsterABI from "../src/api/Monsters.json";
 import MoonLoader from "react-spinners/MoonLoader";
+// import env from "./helpers/env";
 
 const MonsterContract = "0x90B9aCC7C0601224310f3aFCaa451c0D545a1b41";
 
@@ -26,15 +27,15 @@ const DungeonMonsterSelect = ({
     let monstersTemp = [];
     setLoadingMonster(true);
     const myMonsters = await monsterContract.getMyMonster(signer.getAddress());
-    for (let i = 0; i < myMonsters.length; i++) {
-      const status = await monsterContract.getMonsterStatus(myMonsters[i]);
+    for (let monster of myMonsters) {
+      const status = await monsterContract.getMonsterStatus(monster);
       if (status.toString() === "0") {
-        const level = await monsterContract.getMonsterLevel(myMonsters[i]);
-        const exp = await monsterContract.getMonsterExp(myMonsters[i]);
-        const expCap = await monsterContract.getMonsterExpCap(myMonsters[i]);
-        const hunger = await monsterContract.getMonsterHunger(myMonsters[i]);
+        const level = await monsterContract.getMonsterLevel(monster);
+        const exp = await monsterContract.getMonsterExp(monster);
+        const expCap = await monsterContract.getMonsterExpCap(monster);
+        const hunger = await monsterContract.getMonsterHunger(monster);
         monstersTemp.push({
-          id: myMonsters[i].toString(),
+          id: monster.toString(),
           level: level.toString(),
           exp: exp.toString(),
           expCap: expCap.toString(),
@@ -66,11 +67,11 @@ const DungeonMonsterSelect = ({
   function selectMonster(index) {
     if (dungeonSelected.length >= 6) return;
     let monster = monsters[index];
-    let result = checkSelectedMonsters(monster.toString());
+    let result = checkSelectedMonsters(monster.id.toString());
     if (!result) return;
     setDungeonSelected((currentSelected) => [
       ...currentSelected,
-      monster.toString(),
+      monster.id.toString(),
     ]);
   }
 

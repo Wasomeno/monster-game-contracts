@@ -66,9 +66,20 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
         {!showDetails ? (
           <>
             <div className="row justify-content-center align-items-center">
-              <h2 className="text-center p-3" id="modal-title">
-                My Monsters
-              </h2>
+              <div className="col-4">
+                <img
+                  src="back_icon.png"
+                  alt="back-icon"
+                  width={"14%"}
+                  onClick={() => setShowMonsters(false)}
+                />
+              </div>
+              <div className="col-4">
+                <h2 className="text-center p-3" id="modal-title">
+                  My Monsters
+                </h2>
+              </div>
+              <div className="col-4" />
             </div>
             <div className="d-flex justify-content-center flex-wrap p-3">
               {loading ? (
@@ -80,7 +91,7 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
               ) : (
                 monsters.map((details, index) => (
                   <div
-                    className="card col-2 mx-1 p-3 shadow-sm d-flex justify-content-center align-items-center"
+                    className="card col-2 mx-1 p-3 shadow-sm d-flex flex-column justify-content-end align-items-center"
                     key={index}
                     onClick={() => monsterDetails(details.monster.toString())}
                   >
@@ -110,7 +121,7 @@ const MonstersModal = ({ showMonsters, setShowMonsters }) => {
                     )}
 
                     <img src="/monster.png" alt="monster-img" width={"75%"} />
-                    <div className="card-body text-center p-0">
+                    <div className="text-center p-0">
                       <h5 className="card-title" id="modal-title">
                         Monster #{details.monster.toString()}
                       </h5>
